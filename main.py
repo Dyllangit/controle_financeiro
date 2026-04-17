@@ -2,7 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import date
-import mysql.connector
+import os
+import pymysql.cursors
+
 
 app = FastAPI()
 
@@ -16,8 +18,7 @@ app.add_middleware(
 
 # Permite o navegador chamar a API
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-import os
-import pymysql.cursors
+
 
 def get_db():
     return pymysql.connect(
@@ -54,7 +55,7 @@ class Config(BaseModel):
 @app.get("/gastos")
 def listar_gastos():
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     cursor.execute("SELECT * FROM gastos ORDER BY data DESC")
     return cursor.fetchall()
 
@@ -79,7 +80,7 @@ def deletar_gasto(id: int):
 @app.get("/metas")
 def listar_metas():
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     cursor.execute("SELECT * FROM metas")
     return cursor.fetchall()
 
@@ -111,7 +112,7 @@ def deletar_meta(id: int):
 @app.get("/config")
 def get_config():
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     cursor.execute("SELECT * FROM configuracoes WHERE id=1")
     return cursor.fetchone()
 
