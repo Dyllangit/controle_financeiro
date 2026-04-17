@@ -16,10 +16,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Permite o navegador chamar a API
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-
-
 def get_db():
     return pymysql.connect(
         host="financeiro-financeiro123.d.aivencloud.com",
