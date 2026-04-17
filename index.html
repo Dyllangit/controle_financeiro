@@ -148,7 +148,10 @@ async function salvarConfig() {
 
 // --- LÓGICA DE INTERFACE (IGUAL AO SEU) ---
 
-function fmt(v){return 'R$ '+Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:2}) }
+function fmt(v){
+    const sinal = v < 0 ? '-' : '';
+    return `${sinal}R$ ${Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+}
 
 function saldoAtual() {
     const debito = state.gastos.filter(g => g.tipo === 'debito').reduce((a, b) => a + b.valor, 0);
@@ -173,10 +176,13 @@ function renderAll(){
 function renderPainel(){
     const debito = state.gastos.filter(g => g.tipo === 'debito').reduce((a, b) => a + b.valor, 0);
     const credito = state.gastos.filter(g => g.tipo === 'credito').reduce((a, b) => a + b.valor, 0);
+
+    const saldo = saldoAtual();
+    const corSaldo = saldo < 0 ? 'red' : 'green';
     
     document.getElementById('painel').innerHTML = `
         <div class="cards">
-            <div class="card"><div class="card-label">Saldo em Conta</div><div class="card-value green">${fmt(saldoAtual())}</div></div>
+            <div class="card"><div class="card-label">Saldo em Conta</div><div class="card-value ${corSaldo}">${fmt(saldo)}</div></div>
             <div class="card"><div class="card-label">Cartão (Fatura)</div><div class="card-value red">${fmt(credito)}</div></div>
             <div class="card"><div class="card-label">Limite Disponível</div><div class="card-value blue">${fmt(state.limiteCredito - credito)}</div></div>
         </div>
