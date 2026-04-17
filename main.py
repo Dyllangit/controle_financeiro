@@ -8,15 +8,20 @@ app = FastAPI()
 
 # Permite o navegador chamar a API
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+import os
+import pymysql.cursors
 
 def get_db():
-    return mysql.connector.connect(
-        host="localhost", 
-        user="root", 
-        password="12345", 
-        database="financas",
-        # Adicione esta linha abaixo:
-        collation="utf8mb4_general_ci" 
+    return pymysql.connect(
+        host="financeiro-financeiro123.d.aivencloud.com",
+        user="avnadmin",
+        # Aqui está o segredo: ele vai buscar a variável chamada DB_PASSWORD
+        password=os.environ.get("DB_PASSWORD"), 
+        database="defaultdb",
+        port=21040,
+        charset='utf8mb4',
+        cursorclass=pymysql.cursors.DictCursor,
+        autocommit=True
     )
 # --- Modelos ---
 class Gasto(BaseModel):
