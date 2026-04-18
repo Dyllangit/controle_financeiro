@@ -4,12 +4,11 @@
     <meta charset="UTF-8">
     <title>Meu Controle Financeiro</title>
     <style>
-        /* Mantive seu CSS original para o visual continuar idêntico */
         *{box-sizing:border-box;margin:0;padding:0}
         body{font-family: sans-serif; color:#333; background:#f4f7f6; padding: 20px;}
-        .app{max-width:900px;margin:0 auto;padding:1rem; background: #fff; border-radius: 8px; shadow: 0 2px 10px rgba(0,0,0,0.1)}
-        .tabs{display:flex;gap:4px;margin-bottom:1.5rem;border-bottom:0.5px solid #ddd;padding-bottom:0}
-        .tab{padding:8px 16px;font-size:14px;cursor:pointer;border:none;background:none;color:#666;border-bottom:2px solid transparent;margin-bottom:-0.5px;transition:color .15s}
+        .app{max-width:960px;margin:0 auto;padding:1rem; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1)}
+        .tabs{display:flex;gap:4px;margin-bottom:1.5rem;border-bottom:1px solid #ddd;padding-bottom:0;flex-wrap:wrap}
+        .tab{padding:8px 16px;font-size:14px;cursor:pointer;border:none;background:none;color:#666;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s}
         .tab.active{color:#000;border-bottom:2px solid #000;font-weight:500}
         .page{display:none}.page.active{display:block}
         .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:1.5rem}
@@ -18,21 +17,41 @@
         .card-value{font-size:22px;font-weight:500}
         .green{color:#28a745}.red{color:#dc3545}.blue{color:#007bff}
         .section{border:1px solid #eee;border-radius:8px;padding:1.25rem;margin-bottom:1rem}
-        .section-title{font-size:15px;font-weight:500;margin-bottom:1rem; border-bottom: 1px solid #eee; padding-bottom: 5px;}
+        .section-title{font-size:15px;font-weight:500;margin-bottom:1rem; border-bottom: 1px solid #eee; padding-bottom: 5px; display:flex; justify-content:space-between; align-items:center}
         .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
         .form-row.three{grid-template-columns:1fr 1fr 1fr}
+        .form-row.four{grid-template-columns:1fr 1fr 1fr 1fr}
         label{font-size:12px;color:#666;display:block;margin-bottom:4px}
         input,select{width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:14px}
         .btn{padding:8px 18px;border:1px solid #ddd;border-radius:4px;font-size:14px;cursor:pointer;background:#fff}
         .btn.primary{background:#333;color:#fff;border-color:transparent}
-        .btn.danger{color:#dc3545;border-color:#dc3545}
+        .btn.danger{color:#dc3545;border-color:#dc3545;padding:4px 10px;font-size:12px}
+        .btn.sm{padding:4px 10px;font-size:12px}
         table{width:100%;border-collapse:collapse;font-size:13px}
-        th, td{text-align:left;padding:8px;border-bottom:1px solid #eee}
+        th,td{text-align:left;padding:8px;border-bottom:1px solid #eee}
+        th{font-size:12px;color:#666;font-weight:500}
         .badge{padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
         .debito{background:#ffebee;color:#c62828}
         .credito{background:#e3f2fd;color:#1565c0}
-        .progress-bar{height:8px;background:#eee;border-radius:99px;overflow:hidden}
-        .progress-fill{height:100%;background:#007bff}
+        .progress-bar{height:8px;background:#eee;border-radius:99px;overflow:hidden;margin:4px 0}
+        .progress-fill{height:100%;background:#007bff;border-radius:99px}
+        .banco-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:1rem}
+        .banco-card{border:1px solid #eee;border-radius:8px;padding:1rem;background:#fafafa}
+        .banco-card-nome{font-weight:600;font-size:14px;margin-bottom:8px;color:#333}
+        .banco-card-row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px}
+        .banco-card-label{color:#888}
+        .chip{display:inline-flex;align-items:center;gap:6px;background:#f0f0f0;border-radius:99px;padding:4px 10px;font-size:13px;margin:4px}
+        .chip button{border:none;background:none;cursor:pointer;color:#999;font-size:16px;line-height:1;padding:0}
+        .chip button:hover{color:#dc3545}
+        .empty{color:#aaa;font-size:13px;text-align:center;padding:20px}
+        .divider{height:1px;background:#eee;margin:12px 0}
+        .mt{margin-top:10px}
+        .tag-alimentacao{background:#fff3e0;color:#e65100}
+        .tag-transporte{background:#e8f5e9;color:#2e7d32}
+        .tag-saude{background:#fce4ec;color:#c62828}
+        .tag-lazer{background:#ede7f6;color:#4527a0}
+        .tag-pessoal{background:#e3f2fd;color:#1565c0}
+        .tag-outro{background:#f5f5f5;color:#555}
     </style>
 </head>
 <body>
@@ -42,12 +61,16 @@
         <button class="tab active" onclick="goTab('painel')">Painel</button>
         <button class="tab" onclick="goTab('gastos')">Gastos</button>
         <button class="tab" onclick="goTab('metas')">Metas</button>
+        <button class="tab" onclick="goTab('bancos')">Bancos</button>
+        <button class="tab" onclick="goTab('categorias')">Categorias</button>
         <button class="tab" onclick="goTab('config')">Configurações</button>
     </div>
 
     <div id="painel" class="page active">Carregando...</div>
     <div id="gastos" class="page">Carregando...</div>
     <div id="metas" class="page">Carregando...</div>
+    <div id="bancos" class="page">Carregando...</div>
+    <div id="categorias" class="page">Carregando...</div>
     <div id="config" class="page">Carregando...</div>
 </div>
 
@@ -55,31 +78,31 @@
 const API_URL = "https://controlefinanceiro-production-e3b0.up.railway.app";
 
 let state = {
-    saldo: 0,
-    limiteCredito: 0,
     gastos: [],
     metas: [],
-    categorias: ['Pessoal','Amigos','Conta','Alimentação','Transporte','Saúde','Lazer','Outro']
+    bancos: [],
+    categorias: [],
+    config: { saldo: 0, limite_credito: 0 }
 };
 
-// --- FUNÇÕES DE COMUNICAÇÃO COM A API ---
+// --- API ---
 
 async function fetchData() {
     try {
-        const [resGastos, resMetas, resConfig] = await Promise.all([
+        const [resGastos, resMetas, resBancos, resCats, resConfig] = await Promise.all([
             fetch(`${API_URL}/gastos`),
             fetch(`${API_URL}/metas`),
+            fetch(`${API_URL}/bancos`),
+            fetch(`${API_URL}/categorias`),
             fetch(`${API_URL}/config`)
         ]);
 
-        state.gastos = await resGastos.json();
-        state.metas = await resMetas.json();
-        
-        const config = await resConfig.json();
-        if(config) {
-            state.saldo = config.saldo;
-            state.limiteCredito = config.limite_credito;
-        }
+        state.gastos     = await resGastos.json();
+        state.metas      = await resMetas.json();
+        state.bancos     = await resBancos.json();
+        state.categorias = await resCats.json();
+        const config     = await resConfig.json();
+        if (config) state.config = config;
 
         renderAll();
     } catch (e) {
@@ -88,136 +111,199 @@ async function fetchData() {
 }
 
 async function addGasto() {
+    const bancoId = parseInt(document.getElementById('g-banco').value);
+    if (!bancoId) return alert("Selecione um banco.");
     const g = {
         descricao: document.getElementById('g-desc').value,
-        valor: parseFloat(document.getElementById('g-val').value),
-        tipo: document.getElementById('g-tipo').value,
+        valor:     parseFloat(document.getElementById('g-val').value),
+        tipo:      document.getElementById('g-tipo').value,
         categoria: document.getElementById('g-cat').value,
-        data: document.getElementById('g-data').value
+        data:      document.getElementById('g-data').value,
+        banco_id:  bancoId
     };
-
-    await fetch(`${API_URL}/gastos`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(g)
-    });
+    await fetch(`${API_URL}/gastos`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(g) });
     fetchData();
 }
 
 async function removeGasto(id) {
-    await fetch(`${API_URL}/gastos/${id}`, { method: 'DELETE' });
+    if (!confirm("Apagar este gasto?")) return;
+    await fetch(`${API_URL}/gastos/${id}`, { method:'DELETE' });
     fetchData();
 }
 
 async function addMeta() {
-    const m = {
-        nome: document.getElementById('m-nome').value,
-        alvo: parseFloat(document.getElementById('m-alvo').value)
-    };
-    await fetch(`${API_URL}/metas`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(m)
-    });
+    const m = { nome: document.getElementById('m-nome').value, alvo: parseFloat(document.getElementById('m-alvo').value) };
+    await fetch(`${API_URL}/metas`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(m) });
     fetchData();
 }
 
 async function depositar(id) {
     const valor = parseFloat(document.getElementById(`dep-${id}`).value);
-    await fetch(`${API_URL}/metas/${id}/depositar`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ valor })
-    });
+    await fetch(`${API_URL}/metas/${id}/depositar`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ valor }) });
+    fetchData();
+}
+
+async function addBanco() {
+    const b = {
+        nome:            document.getElementById('b-nome').value,
+        saldo:           parseFloat(document.getElementById('b-saldo').value) || 0,
+        limite_credito:  parseFloat(document.getElementById('b-limite').value) || 0
+    };
+    if (!b.nome) return alert("Informe o nome do banco.");
+    await fetch(`${API_URL}/bancos`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) });
+    fetchData();
+}
+
+async function removeBanco(id) {
+    if (!confirm("Apagar este banco? Os gastos vinculados ficarão sem banco.")) return;
+    await fetch(`${API_URL}/bancos/${id}`, { method:'DELETE' });
+    fetchData();
+}
+
+async function addCategoria() {
+    const nome = document.getElementById('cat-nome').value.trim();
+    if (!nome) return alert("Informe o nome da categoria.");
+    await fetch(`${API_URL}/categorias`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ nome }) });
+    fetchData();
+}
+
+async function removeCategoria(id) {
+    if (!confirm("Apagar esta categoria?")) return;
+    await fetch(`${API_URL}/categorias/${id}`, { method:'DELETE' });
     fetchData();
 }
 
 async function salvarConfig() {
     const conf = {
-        saldo: parseFloat(document.getElementById('c-saldo').value),
-        limite_credito: parseFloat(document.getElementById('c-limite').value)
+        saldo:           parseFloat(document.getElementById('c-saldo').value),
+        limite_credito:  parseFloat(document.getElementById('c-limite').value)
     };
-    await fetch(`${API_URL}/config`, {
-        method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(conf)
-    });
-    alert("Configurações salvas no banco!");
+    await fetch(`${API_URL}/config`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(conf) });
+    alert("Configurações salvas!");
     fetchData();
 }
 
-// --- LÓGICA DE INTERFACE (IGUAL AO SEU) ---
+// --- UI ---
 
-function fmt(v){
+function fmt(v) {
     const sinal = v < 0 ? '-' : '';
-    return `${sinal}R$ ${Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+    return `${sinal}R$ ${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 }
 
-function saldoAtual() {
-    const debito = state.gastos.filter(g => g.tipo === 'debito').reduce((a, b) => a + b.valor, 0);
-    return state.saldo - debito;
-}
+function pct(v, t) { return t > 0 ? Math.min(100, (v / t) * 100).toFixed(1) : 0; }
 
-function goTab(t){
-    document.querySelectorAll('.tab').forEach((b,i)=>{
-        b.classList.toggle('active',['painel','gastos','metas','config'][i]===t)
-    });
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+function goTab(t) {
+    const names = ['painel','gastos','metas','bancos','categorias','config'];
+    document.querySelectorAll('.tab').forEach((b, i) => b.classList.toggle('active', names[i] === t));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(t).classList.add('active');
 }
 
-function renderAll(){
+function renderAll() {
     renderPainel();
     renderGastos();
     renderMetas();
+    renderBancos();
+    renderCategorias();
     renderConfig();
 }
 
-function renderPainel(){
-    const debito = state.gastos.filter(g => g.tipo === 'debito').reduce((a, b) => a + b.valor, 0);
-    const credito = state.gastos.filter(g => g.tipo === 'credito').reduce((a, b) => a + b.valor, 0);
+// ---- PAINEL ----
+function renderPainel() {
+    // Totais globais
+    const totalDebito  = state.gastos.filter(g => g.tipo === 'debito').reduce((a, b) => a + b.valor, 0);
+    const totalCredito = state.gastos.filter(g => g.tipo === 'credito').reduce((a, b) => a + b.valor, 0);
+    const totalSaldoCadastrado = state.bancos.reduce((a, b) => a + b.saldo, 0);
+    const totalLimite  = state.bancos.reduce((a, b) => a + b.limite_credito, 0);
+    const saldoAtual   = totalSaldoCadastrado - totalDebito;
 
-    const saldo = saldoAtual();
-    const corSaldo = saldo < 0 ? 'red' : 'green';
-    
+    // Por banco
+    const porBanco = state.bancos.map(banco => {
+        const gastosB  = state.gastos.filter(g => g.banco_id === banco.id);
+        const debitoB  = gastosB.filter(g => g.tipo === 'debito').reduce((a, b) => a + b.valor, 0);
+        const creditoB = gastosB.filter(g => g.tipo === 'credito').reduce((a, b) => a + b.valor, 0);
+        return { ...banco, debitoB, creditoB, saldoAtualB: banco.saldo - debitoB, limiteDispB: banco.limite_credito - creditoB };
+    });
+
+    const corSaldo = saldoAtual < 0 ? 'red' : 'green';
+
     document.getElementById('painel').innerHTML = `
         <div class="cards">
-            <div class="card"><div class="card-label">Saldo em Conta</div><div class="card-value ${corSaldo}">${fmt(saldo)}</div></div>
-            <div class="card"><div class="card-label">Cartão (Fatura)</div><div class="card-value red">${fmt(credito)}</div></div>
-            <div class="card"><div class="card-label">Limite Disponível</div><div class="card-value blue">${fmt(state.limiteCredito - credito)}</div></div>
+            <div class="card"><div class="card-label">Saldo Total (Todos os Bancos)</div><div class="card-value ${corSaldo}">${fmt(saldoAtual)}</div></div>
+            <div class="card"><div class="card-label">Fatura Total (Cartão)</div><div class="card-value red">${fmt(totalCredito)}</div></div>
+            <div class="card"><div class="card-label">Limite Disponível Total</div><div class="card-value blue">${fmt(totalLimite - totalCredito)}</div></div>
         </div>
+
         <div class="section">
-            <div class="section-title">Últimos Gastos</div>
-            <table>
-                ${state.gastos.slice(0,5).map(g => `
-                    <tr><td>${g.descricao}</td><td><span class="badge ${g.tipo}">${g.tipo}</span></td><td>${fmt(g.valor)}</td></tr>
+            <div class="section-title">Por Banco</div>
+            ${porBanco.length === 0 ? `<div class="empty">Nenhum banco cadastrado. Vá em "Bancos" para adicionar.</div>` : `
+            <div class="banco-grid">
+                ${porBanco.map(b => `
+                    <div class="banco-card">
+                        <div class="banco-card-nome">🏦 ${b.nome}</div>
+                        <div class="banco-card-row"><span class="banco-card-label">Saldo</span><span class="${b.saldoAtualB < 0 ? 'red' : 'green'}">${fmt(b.saldoAtualB)}</span></div>
+                        <div class="banco-card-row"><span class="banco-card-label">Fatura</span><span class="red">${fmt(b.creditoB)}</span></div>
+                        <div class="banco-card-row"><span class="banco-card-label">Limite disp.</span><span class="blue">${fmt(b.limiteDispB)}</span></div>
+                    </div>
                 `).join('')}
+            </div>`}
+        </div>
+
+        <div class="section">
+            <div class="section-title">Últimos 5 Gastos</div>
+            <table>
+                <thead><tr><th>Data</th><th>Descrição</th><th>Banco</th><th>Tipo</th><th>Valor</th></tr></thead>
+                <tbody>
+                    ${state.gastos.slice(0, 5).map(g => `
+                        <tr>
+                            <td>${g.data}</td>
+                            <td>${g.descricao}</td>
+                            <td>${g.banco_nome || '—'}</td>
+                            <td><span class="badge ${g.tipo}">${g.tipo}</span></td>
+                            <td>${fmt(g.valor)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
             </table>
         </div>`;
 }
 
-function renderGastos(){
+// ---- GASTOS ----
+function renderGastos() {
+    const catOpts = state.categorias.length
+        ? state.categorias.map(c => `<option>${c.nome}</option>`).join('')
+        : `<option>Sem categorias</option>`;
+    const bancoOpts = state.bancos.length
+        ? `<option value="">Selecione o banco</option>` + state.bancos.map(b => `<option value="${b.id}">${b.nome}</option>`).join('')
+        : `<option value="">Nenhum banco cadastrado</option>`;
+
     document.getElementById('gastos').innerHTML = `
         <div class="section">
             <div class="section-title">Novo Gasto</div>
             <div class="form-row three">
-                <input id="g-desc" placeholder="Descrição">
-                <input id="g-val" type="number" placeholder="Valor">
-                <input id="g-data" type="date" value="${new Date().toISOString().split('T')[0]}">
+                <div><label>Descrição</label><input id="g-desc" placeholder="Ex: Mercado"></div>
+                <div><label>Valor (R$)</label><input id="g-val" type="number" placeholder="0,00"></div>
+                <div><label>Data</label><input id="g-data" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
             </div>
-            <div class="form-row">
-                <select id="g-tipo"><option value="debito">Débito (Sai do Saldo)</option><option value="credito">Crédito (Fatura)</option></select>
-                <select id="g-cat">${state.categorias.map(c=>`<option>${c}</option>`).join('')}</select>
+            <div class="form-row three">
+                <div><label>Tipo</label><select id="g-tipo"><option value="debito">Débito (sai do saldo)</option><option value="credito">Crédito (fatura)</option></select></div>
+                <div><label>Banco</label><select id="g-banco">${bancoOpts}</select></div>
+                <div><label>Categoria</label><select id="g-cat">${catOpts}</select></div>
             </div>
             <button class="btn primary" onclick="addGasto()">Salvar Gasto</button>
         </div>
         <div class="section">
+            <div class="section-title">Todos os Gastos</div>
             <table>
-                <thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Ação</th></tr></thead>
+                <thead><tr><th>Data</th><th>Descrição</th><th>Banco</th><th>Categoria</th><th>Tipo</th><th>Valor</th><th></th></tr></thead>
                 <tbody>
-                    ${state.gastos.map(g => `
+                    ${state.gastos.length === 0 ? `<tr><td colspan="7" class="empty">Nenhum gasto lançado.</td></tr>` :
+                    state.gastos.map(g => `
                         <tr>
-                            <td>${g.data}</td><td>${g.descricao}</td>
+                            <td>${g.data}</td>
+                            <td>${g.descricao}</td>
+                            <td>${g.banco_nome || '—'}</td>
+                            <td>${g.categoria}</td>
                             <td><span class="badge ${g.tipo}">${g.tipo}</span></td>
                             <td>${fmt(g.valor)}</td>
                             <td><button class="btn danger" onclick="removeGasto(${g.id})">Apagar</button></td>
@@ -228,40 +314,104 @@ function renderGastos(){
         </div>`;
 }
 
-function renderMetas(){
+// ---- METAS ----
+function renderMetas() {
     document.getElementById('metas').innerHTML = `
         <div class="section">
             <div class="section-title">Nova Meta</div>
             <div class="form-row">
-                <input id="m-nome" placeholder="Nome da Meta">
-                <input id="m-alvo" type="number" placeholder="Valor Alvo">
+                <div><label>Nome da Meta</label><input id="m-nome" placeholder="Ex: Viagem, Reserva..."></div>
+                <div><label>Valor Alvo (R$)</label><input id="m-alvo" type="number" placeholder="0,00"></div>
             </div>
             <button class="btn primary" onclick="addMeta()">Criar Meta</button>
         </div>
         <div class="section">
-            ${state.metas.map(m => `
-                <div style="margin-bottom:15px">
-                    <strong>${m.nome}</strong> - ${fmt(m.poupado)} de ${fmt(m.alvo)}
-                    <div class="progress-bar"><div class="progress-fill" style="width:${(m.poupado/m.alvo)*100}%"></div></div>
-                    <div style="margin-top:5px">
-                        <input id="dep-${m.id}" type="number" placeholder="Valor" style="width:80px">
-                        <button onclick="depositar(${m.id})">Depositar</button>
+            <div class="section-title">Minhas Metas</div>
+            ${state.metas.length === 0 ? `<div class="empty">Nenhuma meta criada ainda.</div>` :
+            state.metas.map(m => `
+                <div style="margin-bottom:18px">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <strong>${m.nome}</strong>
+                        <span style="font-size:12px;color:#888">${pct(m.poupado, m.alvo)}%</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" style="width:${pct(m.poupado, m.alvo)}%"></div></div>
+                    <div style="display:flex;justify-content:space-between;font-size:12px;color:#666;margin-bottom:6px">
+                        <span>${fmt(m.poupado)} poupado</span><span>Meta: ${fmt(m.alvo)}</span>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <input id="dep-${m.id}" type="number" placeholder="Valor" style="width:120px">
+                        <button class="btn sm primary" onclick="depositar(${m.id})">Depositar</button>
                     </div>
                 </div>
+                <div class="divider"></div>
             `).join('')}
         </div>`;
 }
 
-function renderConfig(){
+// ---- BANCOS ----
+function renderBancos() {
+    document.getElementById('bancos').innerHTML = `
+        <div class="section">
+            <div class="section-title">Cadastrar Banco</div>
+            <div class="form-row three">
+                <div><label>Nome do Banco</label><input id="b-nome" placeholder="Ex: Nubank, Itaú..."></div>
+                <div><label>Saldo Inicial (R$)</label><input id="b-saldo" type="number" placeholder="0,00"></div>
+                <div><label>Limite do Cartão (R$)</label><input id="b-limite" type="number" placeholder="0,00"></div>
+            </div>
+            <button class="btn primary" onclick="addBanco()">Cadastrar Banco</button>
+        </div>
+        <div class="section">
+            <div class="section-title">Bancos Cadastrados</div>
+            ${state.bancos.length === 0 ? `<div class="empty">Nenhum banco cadastrado ainda.</div>` : `
+            <table>
+                <thead><tr><th>Banco</th><th>Saldo Inicial</th><th>Limite Cartão</th><th></th></tr></thead>
+                <tbody>
+                    ${state.bancos.map(b => `
+                        <tr>
+                            <td><strong>${b.nome}</strong></td>
+                            <td>${fmt(b.saldo)}</td>
+                            <td>${fmt(b.limite_credito)}</td>
+                            <td><button class="btn danger" onclick="removeBanco(${b.id})">Apagar</button></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>`}
+        </div>`;
+}
+
+// ---- CATEGORIAS ----
+function renderCategorias() {
+    document.getElementById('categorias').innerHTML = `
+        <div class="section">
+            <div class="section-title">Nova Categoria</div>
+            <div class="form-row" style="max-width:400px">
+                <div><label>Nome</label><input id="cat-nome" placeholder="Ex: Alimentação, Lazer..."></div>
+            </div>
+            <button class="btn primary" onclick="addCategoria()">Adicionar Categoria</button>
+        </div>
+        <div class="section">
+            <div class="section-title">Categorias Cadastradas</div>
+            ${state.categorias.length === 0 ? `<div class="empty">Nenhuma categoria cadastrada ainda.</div>` : `
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">
+                ${state.categorias.map(c => `
+                    <div class="chip">${c.nome}<button onclick="removeCategoria(${c.id})" title="Remover">×</button></div>
+                `).join('')}
+            </div>`}
+        </div>`;
+}
+
+// ---- CONFIG ----
+function renderConfig() {
     document.getElementById('config').innerHTML = `
         <div class="section">
-            <div class="section-title">Ajustes Iniciais</div>
-            <label>Saldo Inicial em Conta</label>
-            <input id="c-saldo" type="number" value="${state.saldo}">
-            <label>Limite Total do Cartão</label>
-            <input id="c-limite" type="number" value="${state.limiteCredito}">
-            <br><br>
-            <button class="btn primary" onclick="salvarConfig()">Atualizar Banco de Dados</button>
+            <div class="section-title">Ajustes Legados</div>
+            <p style="font-size:13px;color:#888;margin-bottom:12px">O saldo e limite agora são gerenciados por banco. Estes campos são mantidos apenas para compatibilidade.</p>
+            <label>Saldo Global</label>
+            <input id="c-saldo" type="number" value="${state.config.saldo}" style="max-width:300px;margin-bottom:10px">
+            <label>Limite Global do Cartão</label>
+            <input id="c-limite" type="number" value="${state.config.limite_credito}" style="max-width:300px;margin-bottom:10px">
+            <br>
+            <button class="btn primary" onclick="salvarConfig()">Salvar</button>
         </div>`;
 }
 
