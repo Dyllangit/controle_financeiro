@@ -6,7 +6,33 @@
     <style>
         *{box-sizing:border-box;margin:0;padding:0}
         body{font-family: sans-serif; color:#333; background:#f4f7f6; padding: 20px;}
+
+        /* ── Auth ── */
+        #auth-screen{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 40px)}
+        .auth-box{background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);padding:2.5rem;width:100%;max-width:400px}
+        .auth-logo{text-align:center;margin-bottom:1.5rem}
+        .auth-logo h1{font-size:22px;font-weight:600;color:#222}
+        .auth-logo p{font-size:13px;color:#888;margin-top:4px}
+        .auth-tabs{display:flex;border-bottom:1px solid #eee;margin-bottom:1.5rem}
+        .auth-tab{flex:1;text-align:center;padding:10px;font-size:14px;cursor:pointer;border:none;background:none;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px;transition:.15s}
+        .auth-tab.active{color:#222;border-bottom:2px solid #222;font-weight:500}
+        .auth-form{display:none}.auth-form.active{display:block}
+        .auth-field{margin-bottom:1rem}
+        .auth-field label{display:block;font-size:12px;color:#666;margin-bottom:4px}
+        .auth-field input{width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;transition:border .15s}
+        .auth-field input:focus{outline:none;border-color:#555}
+        .auth-btn{width:100%;padding:10px;background:#222;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer;margin-top:.5rem;transition:background .15s}
+        .auth-btn:hover{background:#444}
+        .auth-error{color:#dc3545;font-size:13px;margin-top:8px;text-align:center;min-height:18px}
+
+        /* ── App ── */
+        #app-screen{display:none}
         .app{max-width:960px;margin:0 auto;padding:1rem; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1)}
+        .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid #eee}
+        .topbar-user{font-size:13px;color:#666}
+        .topbar-user strong{color:#333}
+        .topbar-logout{font-size:12px;color:#dc3545;cursor:pointer;background:none;border:none;padding:4px 10px;border-radius:4px;border:1px solid #dc3545}
+        .topbar-logout:hover{background:#fff5f5}
         .tabs{display:flex;gap:4px;margin-bottom:1.5rem;border-bottom:1px solid #ddd;padding-bottom:0;flex-wrap:wrap}
         .tab{padding:8px 16px;font-size:14px;cursor:pointer;border:none;background:none;color:#666;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s}
         .tab.active{color:#000;border-bottom:2px solid #000;font-weight:500}
@@ -56,7 +82,59 @@
 </head>
 <body>
 
+<!-- ══════════════ TELA DE AUTH ══════════════ -->
+<div id="auth-screen">
+    <div class="auth-box">
+        <div class="auth-logo">
+            <h1>💰 Controle Financeiro</h1>
+            <p>Gerencie suas finanças com facilidade</p>
+        </div>
+        <div class="auth-tabs">
+            <button class="auth-tab active" onclick="switchAuthTab('login')">Entrar</button>
+            <button class="auth-tab" onclick="switchAuthTab('registrar')">Criar conta</button>
+        </div>
+
+        <!-- Login -->
+        <div id="form-login" class="auth-form active">
+            <div class="auth-field">
+                <label>E-mail</label>
+                <input id="l-email" type="email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter') fazerLogin()">
+            </div>
+            <div class="auth-field">
+                <label>Senha</label>
+                <input id="l-senha" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter') fazerLogin()">
+            </div>
+            <button class="auth-btn" onclick="fazerLogin()">Entrar</button>
+            <div class="auth-error" id="login-erro"></div>
+        </div>
+
+        <!-- Registro -->
+        <div id="form-registrar" class="auth-form">
+            <div class="auth-field">
+                <label>Nome</label>
+                <input id="r-nome" type="text" placeholder="Seu nome" onkeydown="if(event.key==='Enter') fazerRegistro()">
+            </div>
+            <div class="auth-field">
+                <label>E-mail</label>
+                <input id="r-email" type="email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter') fazerRegistro()">
+            </div>
+            <div class="auth-field">
+                <label>Senha</label>
+                <input id="r-senha" type="password" placeholder="Mínimo 6 caracteres" onkeydown="if(event.key==='Enter') fazerRegistro()">
+            </div>
+            <button class="auth-btn" onclick="fazerRegistro()">Criar conta</button>
+            <div class="auth-error" id="registro-erro"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════ TELA DO APP ══════════════ -->
+<div id="app-screen">
 <div class="app">
+    <div class="topbar">
+        <div class="topbar-user">Olá, <strong id="topbar-nome">...</strong></div>
+        <button class="topbar-logout" onclick="logout()">Sair</button>
+    </div>
     <div class="tabs">
         <button class="tab active" onclick="goTab('painel')">Painel</button>
         <button class="tab" onclick="goTab('gastos')">Gastos</button>
@@ -73,9 +151,13 @@
     <div id="categorias" class="page">Carregando...</div>
     <div id="config" class="page">Carregando...</div>
 </div>
+</div>
 
 <script>
 const API_URL = "https://controlefinanceiro-production-e3b0.up.railway.app";
+
+let TOKEN = localStorage.getItem("cf_token") || null;
+let USUARIO_NOME = localStorage.getItem("cf_nome") || "";
 
 let state = {
     gastos: [],
@@ -85,17 +167,107 @@ let state = {
     config: { saldo: 0, limite_credito: 0 }
 };
 
-// --- API ---
+// ─── Auth helpers ─────────────────────────────────────────────────────────────
+
+function authHeaders() {
+    return { "Content-Type": "application/json", "Authorization": `Bearer ${TOKEN}` };
+}
+
+function switchAuthTab(tab) {
+    document.querySelectorAll('.auth-tab').forEach((b, i) => b.classList.toggle('active', ['login','registrar'][i] === tab));
+    document.getElementById('form-login').classList.toggle('active', tab === 'login');
+    document.getElementById('form-registrar').classList.toggle('active', tab === 'registrar');
+    document.getElementById('login-erro').textContent = '';
+    document.getElementById('registro-erro').textContent = '';
+}
+
+async function fazerLogin() {
+    const email = document.getElementById('l-email').value.trim();
+    const senha = document.getElementById('l-senha').value;
+    const erroEl = document.getElementById('login-erro');
+    erroEl.textContent = '';
+    if (!email || !senha) return erroEl.textContent = 'Preencha e-mail e senha.';
+    try {
+        const res = await fetch(`${API_URL}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, senha })
+        });
+        const data = await res.json();
+        if (!res.ok) return erroEl.textContent = data.detail || 'Erro ao entrar.';
+        salvarSessao(data);
+    } catch(e) {
+        erroEl.textContent = 'Erro de conexão com o servidor.';
+    }
+}
+
+async function fazerRegistro() {
+    const nome  = document.getElementById('r-nome').value.trim();
+    const email = document.getElementById('r-email').value.trim();
+    const senha = document.getElementById('r-senha').value;
+    const erroEl = document.getElementById('registro-erro');
+    erroEl.textContent = '';
+    if (!nome || !email || !senha) return erroEl.textContent = 'Preencha todos os campos.';
+    if (senha.length < 6) return erroEl.textContent = 'Senha deve ter ao menos 6 caracteres.';
+    try {
+        const res = await fetch(`${API_URL}/registrar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nome, email, senha })
+        });
+        const data = await res.json();
+        if (!res.ok) return erroEl.textContent = data.detail || 'Erro ao criar conta.';
+        salvarSessao(data);
+    } catch(e) {
+        erroEl.textContent = 'Erro de conexão com o servidor.';
+    }
+}
+
+function salvarSessao(data) {
+    TOKEN = data.token;
+    USUARIO_NOME = data.nome;
+    localStorage.setItem("cf_token", TOKEN);
+    localStorage.setItem("cf_nome", USUARIO_NOME);
+    entrarNoApp();
+}
+
+function entrarNoApp() {
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('app-screen').style.display = 'block';
+    document.getElementById('topbar-nome').textContent = USUARIO_NOME;
+    fetchData();
+}
+
+function logout() {
+    TOKEN = null;
+    USUARIO_NOME = "";
+    localStorage.removeItem("cf_token");
+    localStorage.removeItem("cf_nome");
+    document.getElementById('app-screen').style.display = 'none';
+    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('l-email').value = '';
+    document.getElementById('l-senha').value = '';
+}
+
+// Verificar se já tem sessão salva
+if (TOKEN) {
+    entrarNoApp();
+}
+
+// ─── API ──────────────────────────────────────────────────────────────────────
 
 async function fetchData() {
     try {
         const [resGastos, resMetas, resBancos, resCats, resConfig] = await Promise.all([
-            fetch(`${API_URL}/gastos`),
-            fetch(`${API_URL}/metas`),
-            fetch(`${API_URL}/bancos`),
-            fetch(`${API_URL}/categorias`),
-            fetch(`${API_URL}/config`)
+            fetch(`${API_URL}/gastos`,     { headers: authHeaders() }),
+            fetch(`${API_URL}/metas`,      { headers: authHeaders() }),
+            fetch(`${API_URL}/bancos`,     { headers: authHeaders() }),
+            fetch(`${API_URL}/categorias`, { headers: authHeaders() }),
+            fetch(`${API_URL}/config`,     { headers: authHeaders() })
         ]);
+
+        // Token expirado
+        if (resGastos.status === 401) { logout(); return; }
 
         state.gastos     = await resGastos.json();
         state.metas      = await resMetas.json();
@@ -121,69 +293,69 @@ async function addGasto() {
         data:      document.getElementById('g-data').value,
         banco_id:  bancoId
     };
-    await fetch(`${API_URL}/gastos`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(g) });
+    await fetch(`${API_URL}/gastos`, { method:'POST', headers: authHeaders(), body:JSON.stringify(g) });
     fetchData();
 }
 
 async function removeGasto(id) {
     if (!confirm("Apagar este gasto?")) return;
-    await fetch(`${API_URL}/gastos/${id}`, { method:'DELETE' });
+    await fetch(`${API_URL}/gastos/${id}`, { method:'DELETE', headers: authHeaders() });
     fetchData();
 }
 
 async function addMeta() {
     const m = { nome: document.getElementById('m-nome').value, alvo: parseFloat(document.getElementById('m-alvo').value) };
-    await fetch(`${API_URL}/metas`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(m) });
+    await fetch(`${API_URL}/metas`, { method:'POST', headers: authHeaders(), body:JSON.stringify(m) });
     fetchData();
 }
 
 async function depositar(id) {
     const valor = parseFloat(document.getElementById(`dep-${id}`).value);
-    await fetch(`${API_URL}/metas/${id}/depositar`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ valor }) });
+    await fetch(`${API_URL}/metas/${id}/depositar`, { method:'POST', headers: authHeaders(), body:JSON.stringify({ valor }) });
     fetchData();
 }
 
 async function addBanco() {
     const b = {
-        nome:            document.getElementById('b-nome').value,
-        saldo:           parseFloat(document.getElementById('b-saldo').value) || 0,
-        limite_credito:  parseFloat(document.getElementById('b-limite').value) || 0
+        nome:           document.getElementById('b-nome').value,
+        saldo:          parseFloat(document.getElementById('b-saldo').value) || 0,
+        limite_credito: parseFloat(document.getElementById('b-limite').value) || 0
     };
     if (!b.nome) return alert("Informe o nome do banco.");
-    await fetch(`${API_URL}/bancos`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) });
+    await fetch(`${API_URL}/bancos`, { method:'POST', headers: authHeaders(), body:JSON.stringify(b) });
     fetchData();
 }
 
 async function removeBanco(id) {
     if (!confirm("Apagar este banco? Os gastos vinculados ficarão sem banco.")) return;
-    await fetch(`${API_URL}/bancos/${id}`, { method:'DELETE' });
+    await fetch(`${API_URL}/bancos/${id}`, { method:'DELETE', headers: authHeaders() });
     fetchData();
 }
 
 async function addCategoria() {
     const nome = document.getElementById('cat-nome').value.trim();
     if (!nome) return alert("Informe o nome da categoria.");
-    await fetch(`${API_URL}/categorias`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ nome }) });
+    await fetch(`${API_URL}/categorias`, { method:'POST', headers: authHeaders(), body:JSON.stringify({ nome }) });
     fetchData();
 }
 
 async function removeCategoria(id) {
     if (!confirm("Apagar esta categoria?")) return;
-    await fetch(`${API_URL}/categorias/${id}`, { method:'DELETE' });
+    await fetch(`${API_URL}/categorias/${id}`, { method:'DELETE', headers: authHeaders() });
     fetchData();
 }
 
 async function salvarConfig() {
     const conf = {
-        saldo:           parseFloat(document.getElementById('c-saldo').value),
-        limite_credito:  parseFloat(document.getElementById('c-limite').value)
+        saldo:          parseFloat(document.getElementById('c-saldo').value),
+        limite_credito: parseFloat(document.getElementById('c-limite').value)
     };
-    await fetch(`${API_URL}/config`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(conf) });
+    await fetch(`${API_URL}/config`, { method:'PUT', headers: authHeaders(), body:JSON.stringify(conf) });
     alert("Configurações salvas!");
     fetchData();
 }
 
-// --- UI ---
+// ─── UI ───────────────────────────────────────────────────────────────────────
 
 function fmt(v) {
     const sinal = v < 0 ? '-' : '';
@@ -208,16 +380,14 @@ function renderAll() {
     renderConfig();
 }
 
-// ---- PAINEL ----
+// ─── PAINEL ───────────────────────────────────────────────────────────────────
 function renderPainel() {
-    // Totais globais
     const totalDebito  = state.gastos.filter(g => g.tipo === 'debito').reduce((a, b) => a + b.valor, 0);
     const totalCredito = state.gastos.filter(g => g.tipo === 'credito').reduce((a, b) => a + b.valor, 0);
     const totalSaldoCadastrado = state.bancos.reduce((a, b) => a + b.saldo, 0);
     const totalLimite  = state.bancos.reduce((a, b) => a + b.limite_credito, 0);
     const saldoAtual   = totalSaldoCadastrado - totalDebito;
 
-    // Por banco
     const porBanco = state.bancos.map(banco => {
         const gastosB  = state.gastos.filter(g => g.banco_id === banco.id);
         const debitoB  = gastosB.filter(g => g.tipo === 'debito').reduce((a, b) => a + b.valor, 0);
@@ -268,7 +438,7 @@ function renderPainel() {
         </div>`;
 }
 
-// ---- GASTOS ----
+// ─── GASTOS ───────────────────────────────────────────────────────────────────
 function renderGastos() {
     const catOpts = state.categorias.length
         ? state.categorias.map(c => `<option>${c.nome}</option>`).join('')
@@ -314,7 +484,7 @@ function renderGastos() {
         </div>`;
 }
 
-// ---- METAS ----
+// ─── METAS ────────────────────────────────────────────────────────────────────
 function renderMetas() {
     document.getElementById('metas').innerHTML = `
         <div class="section">
@@ -341,6 +511,7 @@ function renderMetas() {
                     <div style="display:flex;gap:8px;align-items:center">
                         <input id="dep-${m.id}" type="number" placeholder="Valor" style="width:120px">
                         <button class="btn sm primary" onclick="depositar(${m.id})">Depositar</button>
+                        <button class="btn sm danger" onclick="removeMeta(${m.id})">Apagar</button>
                     </div>
                 </div>
                 <div class="divider"></div>
@@ -348,7 +519,13 @@ function renderMetas() {
         </div>`;
 }
 
-// ---- BANCOS ----
+async function removeMeta(id) {
+    if (!confirm("Apagar esta meta?")) return;
+    await fetch(`${API_URL}/metas/${id}`, { method:'DELETE', headers: authHeaders() });
+    fetchData();
+}
+
+// ─── BANCOS ───────────────────────────────────────────────────────────────────
 function renderBancos() {
     document.getElementById('bancos').innerHTML = `
         <div class="section">
@@ -379,7 +556,7 @@ function renderBancos() {
         </div>`;
 }
 
-// ---- CATEGORIAS ----
+// ─── CATEGORIAS ───────────────────────────────────────────────────────────────
 function renderCategorias() {
     document.getElementById('categorias').innerHTML = `
         <div class="section">
@@ -400,7 +577,7 @@ function renderCategorias() {
         </div>`;
 }
 
-// ---- CONFIG ----
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
 function renderConfig() {
     document.getElementById('config').innerHTML = `
         <div class="section">
@@ -414,9 +591,6 @@ function renderConfig() {
             <button class="btn primary" onclick="salvarConfig()">Salvar</button>
         </div>`;
 }
-
-// Iniciar
-fetchData();
 </script>
 </body>
 </html>
