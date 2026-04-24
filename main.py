@@ -216,13 +216,20 @@ def deletar_categoria(id: int, usuario_id: int = Depends(verificar_token)):
 def listar_gastos(usuario_id: int = Depends(verificar_token)):
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("""
-        SELECT g.*, b.nome as banco_nome
+    # Note que agora fazemos JOIN com bancos (b) E bancos_lista (bl)
+    query = """
+        SELECT 
+            g.*, 
+            c.nome as categoria_nome, 
+            bl.nome as banco_nome
         FROM gastos g
+        LEFT JOIN categorias c ON g.categoria_id = c.id
         LEFT JOIN bancos b ON g.banco_id = b.id
-        WHERE g.usuario_id=%s
+        LEFT JOIN bancos_lista bl ON b.banco_lista_id = bl.id
+        WHERE g.usuario_id = %s
         ORDER BY g.data DESC
-    """, (usuario_id,))
+    """
+    cursor.execute(query, (usuario_id,))
     return cursor.fetchall()
 
 @app.post("/gastos")
