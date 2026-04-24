@@ -90,7 +90,7 @@ class Config(BaseModel):
     limite_credito: float
 
 class Banco(BaseModel):
-    nome: str
+    banco_lista_id: int
     saldo: float = 0
     limite_credito: float = 0
 
@@ -148,7 +148,13 @@ def me(usuario_id: int = Depends(verificar_token)):
 def listar_bancos(usuario_id: int = Depends(verificar_token)):
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("SELECT * FROM bancos WHERE usuario_id=%s ORDER BY nome", (usuario_id,))
+    # Usamos JOIN para pegar o nome da tabela oficial
+    cursor.execute("""
+        SELECT b.id, b.saldo, b.limite_credito, bl.nome, bl.id as banco_lista_id
+        FROM bancos b
+        JOIN bancos_lista bl ON b.banco_lista_id = bl.id
+        WHERE b.usuario_id=%s ORDER BY bl.nome
+    """, (usuario_id,))
     return cursor.fetchall()
 
 @app.post("/bancos")
@@ -156,8 +162,8 @@ def criar_banco(b: Banco, usuario_id: int = Depends(verificar_token)):
     db = get_db()
     cursor = db.cursor()
     cursor.execute(
-        "INSERT INTO bancos (nome, saldo, limite_credito, usuario_id) VALUES (%s, %s, %s, %s)",
-        (b.nome, b.saldo, b.limite_credito, usuario_id)
+        "INSERT INTO bancos (banco_lista_id, saldo, limite_credito, usuario_id) VALUES (%s, %s, %s, %s)",
+        (b.banco_lista_id, b.saldo, b.limite_credito, usuario_id)
     )
     return {"id": cursor.lastrowid}
 
