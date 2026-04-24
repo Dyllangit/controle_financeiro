@@ -163,10 +163,17 @@ let state = {
     metas: [],
     bancos: [],
     categorias: [],
+	listaBancosOficiais: [],
     config: { saldo: 0, limite_credito: 0 }
 };
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
+
+async function carregarListaBancos() {
+    const res = await fetch(`${API_URL}/bancos-lista`, { headers: authHeaders() });
+    listaBancosOficiais = await res.json();
+    renderBancos(); // Re-renderiza para mostrar o select preenchido
+}
 
 function authHeaders() {
     return { "Content-Type": "application/json", "Authorization": `Bearer ${TOKEN}` };
@@ -316,11 +323,11 @@ async function depositar(id) {
 
 async function addBanco() {
     const b = {
-        nome:           document.getElementById('b-nome').value,
+        banco_lista_id: parseInt(document.getElementById('b-select').value),
         saldo:          valorNumerico(document.getElementById('b-saldo')),
         limite_credito: valorNumerico(document.getElementById('b-limite'))
     };
-    if (!b.nome) return alert("Informe o nome do banco.");
+    if (!b.banco_lista_id) return alert("Selecione um banco.");
     await fetch(`${API_URL}/bancos`, { method:'POST', headers: authHeaders(), body:JSON.stringify(b) });
     fetchData();
 }
@@ -536,24 +543,36 @@ async function removeMeta(id) {
 
 // ─── BANCOS ───────────────────────────────────────────────────────────────────
 function renderBancos() {
+    const opcoesBancos = listaBancosOficiais.length > 0 
+        ? listaBancosOficiais.map(bl => `<option value="${bl.id}">${bl.id} - ${bl.nome}</option>`).join('')
+        : `<option value="">Carregando lista de bancos...</option>`;
+
     document.getElementById('bancos').innerHTML = `
         <div class="section">
-            <div class="section-title">Cadastrar Banco</div>
+            <div class="section-title">Ativar Novo Banco</div>
             <div class="form-row three">
-                <div><label>Nome do Banco</label><input id="b-nome" placeholder="Ex: Nubank, Itaú..."></div>
+                <div>
+                    <label>Selecione o Banco</label>
+                    <select id="b-select" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                        <option value="">Escolha um banco...</option>
+                        ${opcoesBancos}
+                    </select>
+                </div>
                 <div><label>Saldo Inicial (R$)</label><input id="b-saldo" type="text" placeholder="0,00" oninput="mascaraMoeda(this)" inputmode="numeric"></div>
                 <div><label>Limite do Cartão (R$)</label><input id="b-limite" type="text" placeholder="0,00" oninput="mascaraMoeda(this)" inputmode="numeric"></div>
             </div>
-            <button class="btn primary" onclick="addBanco()">Cadastrar Banco</button>
+            <button class="btn primary" onclick="addBanco()">Ativar Banco</button>
         </div>
+
         <div class="section">
-            <div class="section-title">Bancos Cadastrados</div>
-            ${state.bancos.length === 0 ? `<div class="empty">Nenhum banco cadastrado ainda.</div>` : `
+            <div class="section-title">Meus Bancos Ativos</div>
+            ${state.bancos.length === 0 ? `<div class="empty">Nenhum banco ativo ainda.</div>` : `
             <table>
-                <thead><tr><th>Banco</th><th>Saldo Inicial</th><th>Limite Cartão</th><th></th></tr></thead>
+                <thead><tr><th>Cód.</th><th>Banco</th><th>Saldo</th><th>Limite</th><th></th></tr></thead>
                 <tbody>
                     ${state.bancos.map(b => `
                         <tr>
+                            <td><small>${b.banco_lista_id}</small></td>
                             <td><strong>${b.nome}</strong></td>
                             <td>${fmt(b.saldo)}</td>
                             <td>${fmt(b.limite_credito)}</td>
