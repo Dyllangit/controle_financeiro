@@ -2,14 +2,16 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>Meu Controle Financeiro</title>
     <style>
+        /* ── Reset ── */
         *{box-sizing:border-box;margin:0;padding:0}
-        body{font-family: sans-serif; color:#333; background:#f4f7f6; padding: 20px;}
+        body{font-family:sans-serif;color:#333;background:#f4f7f6;padding:12px}
 
         /* ── Auth ── */
-        #auth-screen{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 40px)}
-        .auth-box{background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);padding:2.5rem;width:100%;max-width:400px}
+        #auth-screen{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 24px)}
+        .auth-box{background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);padding:2rem;width:100%;max-width:400px}
         .auth-logo{text-align:center;margin-bottom:1.5rem}
         .auth-logo h1{font-size:22px;font-weight:600;color:#222}
         .auth-logo p{font-size:13px;color:#888;margin-top:4px}
@@ -19,58 +21,92 @@
         .auth-form{display:none}.auth-form.active{display:block}
         .auth-field{margin-bottom:1rem}
         .auth-field label{display:block;font-size:12px;color:#666;margin-bottom:4px}
-        .auth-field input{width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;transition:border .15s}
+        .auth-field input{width:100%;padding:11px 12px;border:1px solid #ddd;border-radius:6px;font-size:16px;transition:border .15s}
         .auth-field input:focus{outline:none;border-color:#555}
-        .auth-btn{width:100%;padding:10px;background:#222;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer;margin-top:.5rem;transition:background .15s}
+        .auth-btn{width:100%;padding:12px;background:#222;color:#fff;border:none;border-radius:6px;font-size:15px;font-weight:500;cursor:pointer;margin-top:.5rem;transition:background .15s}
         .auth-btn:hover{background:#444}
         .auth-error{color:#dc3545;font-size:13px;margin-top:8px;text-align:center;min-height:18px}
 
         /* ── App ── */
         #app-screen{display:none}
-        .app{max-width:960px;margin:0 auto;padding:1rem; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1)}
-        .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid #eee}
+        .app{max-width:960px;margin:0 auto;padding:.85rem;background:#fff;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.1)}
+
+        /* Topbar */
+        .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;padding-bottom:.65rem;border-bottom:1px solid #eee}
         .topbar-user{font-size:13px;color:#666}
         .topbar-user strong{color:#333}
-        .topbar-logout{font-size:12px;color:#dc3545;cursor:pointer;background:none;border:none;padding:4px 10px;border-radius:4px;border:1px solid #dc3545}
+        .topbar-logout{font-size:12px;color:#dc3545;cursor:pointer;background:none;border:1px solid #dc3545;padding:6px 12px;border-radius:4px;white-space:nowrap}
         .topbar-logout:hover{background:#fff5f5}
-        .tabs{display:flex;gap:4px;margin-bottom:1.5rem;border-bottom:1px solid #ddd;padding-bottom:0;flex-wrap:wrap}
-        .tab{padding:8px 16px;font-size:14px;cursor:pointer;border:none;background:none;color:#666;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s}
+
+        /* Tabs - scroll horizontal no celular */
+        .tabs{display:flex;gap:0;margin-bottom:1.25rem;border-bottom:1px solid #ddd;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+        .tabs::-webkit-scrollbar{display:none}
+        .tab{padding:10px 16px;font-size:14px;cursor:pointer;border:none;background:none;color:#666;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;white-space:nowrap;flex-shrink:0}
         .tab.active{color:#000;border-bottom:2px solid #000;font-weight:500}
+
         .page{display:none}.page.active{display:block}
-        .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:1.5rem}
-        .card{background:#f9f9f9;border-radius:8px;padding:1rem; border: 1px solid #eee}
-        .card-label{font-size:12px;color:#666;margin-bottom:4px}
-        .card-value{font-size:22px;font-weight:500}
+
+        /* Cards do painel */
+        .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.25rem}
+        .card{background:#f9f9f9;border-radius:8px;padding:.85rem;border:1px solid #eee}
+        .card-label{font-size:11px;color:#666;margin-bottom:4px}
+        .card-value{font-size:20px;font-weight:500}
         .green{color:#28a745}.red{color:#dc3545}.blue{color:#007bff}
-        .section{border:1px solid #eee;border-radius:8px;padding:1.25rem;margin-bottom:1rem}
-        .section-title{font-size:15px;font-weight:500;margin-bottom:1rem; border-bottom: 1px solid #eee; padding-bottom: 5px; display:flex; justify-content:space-between; align-items:center}
-        .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
-        .form-row.three{grid-template-columns:1fr 1fr 1fr}
-        .form-row.four{grid-template-columns:1fr 1fr 1fr 1fr}
+
+        /* Sections */
+        .section{border:1px solid #eee;border-radius:8px;padding:1rem;margin-bottom:1rem}
+        .section-title{font-size:15px;font-weight:500;margin-bottom:1rem;border-bottom:1px solid #eee;padding-bottom:5px;display:flex;justify-content:space-between;align-items:center}
+
+        /* Formulários - 1 coluna no mobile, grid no desktop */
+        .form-row{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:10px}
         label{font-size:12px;color:#666;display:block;margin-bottom:4px}
-        input,select{width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:14px}
-        .btn{padding:8px 18px;border:1px solid #ddd;border-radius:4px;font-size:14px;cursor:pointer;background:#fff}
+        input,select{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:16px}
+        input:focus,select:focus{outline:none;border-color:#555}
+
+        /* Botões - touch-friendly */
+        .btn{padding:10px 18px;border:1px solid #ddd;border-radius:6px;font-size:14px;cursor:pointer;background:#fff;min-height:40px}
         .btn.primary{background:#333;color:#fff;border-color:transparent}
-        .btn.danger{color:#dc3545;border-color:#dc3545;padding:4px 10px;font-size:12px}
-        .btn.sm{padding:4px 10px;font-size:12px}
-        table{width:100%;border-collapse:collapse;font-size:13px}
-        th,td{text-align:left;padding:8px;border-bottom:1px solid #eee}
-        th{font-size:12px;color:#666;font-weight:500}
-        .badge{padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500}
+        .btn.primary:hover{background:#555}
+        .btn.danger{color:#dc3545;border-color:#dc3545;padding:8px 12px;font-size:13px}
+        .btn.sm{padding:8px 12px;font-size:13px;min-height:36px}
+        .btn-full{width:100%;margin-top:4px}
+
+        /* Tabelas - scroll horizontal no mobile */
+        .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+        table{width:100%;border-collapse:collapse;font-size:13px;min-width:420px}
+        th,td{text-align:left;padding:9px 8px;border-bottom:1px solid #eee}
+        th{font-size:11px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+
+        /* Cards de gastos para mobile (alternativa à tabela) */
+        .gasto-card{border:1px solid #eee;border-radius:8px;padding:.85rem;margin-bottom:.6rem;background:#fafafa}
+        .gasto-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+        .gasto-card-desc{font-weight:500;font-size:14px;flex:1;margin-right:8px}
+        .gasto-card-valor{font-weight:600;font-size:15px;white-space:nowrap}
+        .gasto-card-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px}
+        .gasto-card-info{font-size:11px;color:#888}
+        .gasto-card-actions{margin-top:8px;display:flex;justify-content:flex-end}
+
+        .badge{padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600}
         .debito{background:#ffebee;color:#c62828}
         .credito{background:#e3f2fd;color:#1565c0}
+
         .progress-bar{height:8px;background:#eee;border-radius:99px;overflow:hidden;margin:4px 0}
-        .progress-fill{height:100%;background:#007bff;border-radius:99px}
-        .banco-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:1rem}
+        .progress-fill{height:100%;background:#007bff;border-radius:99px;transition:width .4s}
+
+        /* Grid de bancos */
+        .banco-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:1rem}
         .banco-card{border:1px solid #eee;border-radius:8px;padding:1rem;background:#fafafa}
         .banco-card-nome{font-weight:600;font-size:14px;margin-bottom:8px;color:#333}
-        .banco-card-row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px}
+        .banco-card-row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
         .banco-card-label{color:#888}
-        .chip{display:inline-flex;align-items:center;gap:6px;background:#f0f0f0;border-radius:99px;padding:4px 10px;font-size:13px;margin:4px}
-        .chip button{border:none;background:none;cursor:pointer;color:#999;font-size:16px;line-height:1;padding:0}
+
+        /* Chips de categoria */
+        .chip{display:inline-flex;align-items:center;gap:6px;background:#f0f0f0;border-radius:99px;padding:6px 12px;font-size:13px;margin:4px}
+        .chip button{border:none;background:none;cursor:pointer;color:#999;font-size:18px;line-height:1;padding:0}
         .chip button:hover{color:#dc3545}
-        .empty{color:#aaa;font-size:13px;text-align:center;padding:20px}
-        .divider{height:1px;background:#eee;margin:12px 0}
+
+        .empty{color:#aaa;font-size:13px;text-align:center;padding:24px}
+        .divider{height:1px;background:#eee;margin:14px 0}
         .mt{margin-top:10px}
         .tag-alimentacao{background:#fff3e0;color:#e65100}
         .tag-transporte{background:#e8f5e9;color:#2e7d32}
@@ -78,6 +114,19 @@
         .tag-lazer{background:#ede7f6;color:#4527a0}
         .tag-pessoal{background:#e3f2fd;color:#1565c0}
         .tag-outro{background:#f5f5f5;color:#555}
+
+        /* ── Media queries ── */
+        @media(min-width:600px){
+            body{padding:20px}
+            .form-row{grid-template-columns:1fr 1fr}
+            .form-row.three{grid-template-columns:1fr 1fr 1fr}
+            .form-row.four{grid-template-columns:1fr 1fr 1fr 1fr}
+            .banco-grid{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+            .btn-full{width:auto}
+        }
+        @media(min-width:768px){
+            .cards{grid-template-columns:repeat(3,1fr)}
+        }
 
         /* ── Loading Overlay ── */
         #loading-overlay {
@@ -110,24 +159,26 @@
         /* ── Toast ── */
         #toast {
             position: fixed;
-            bottom: 32px;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            padding: 12px 28px;
+            padding: 13px 24px;
             border-radius: 10px;
             font-size: 14px;
             font-weight: 600;
             color: #fff;
             z-index: 10000;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
             white-space: nowrap;
+            max-width: calc(100vw - 32px);
+            text-align: center;
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.3s ease, bottom 0.3s ease;
         }
         #toast.visivel {
             opacity: 1;
-            bottom: 40px;
+            bottom: 28px;
         }
         #toast.ok  { background: #1a7f4b; }
         #toast.err { background: #c0392b; }
@@ -581,7 +632,7 @@ function renderPainel() {
 
         <div class="section">
             <div class="section-title">Últimos 5 Gastos</div>
-            <table>
+            <div class="table-wrap"><table>
                 <thead><tr><th>Data</th><th>Descrição</th><th>Banco</th><th>Tipo</th><th>Valor</th></tr></thead>
                 <tbody>
                     ${state.gastos.slice(0, 5).map(g => `
@@ -594,7 +645,7 @@ function renderPainel() {
                         </tr>
                     `).join('')}
                 </tbody>
-            </table>
+            </table></div>
         </div>`;
 }
 
@@ -606,6 +657,26 @@ function renderGastos() {
     const bancoOpts = state.bancos.length
         ? `<option value="">Selecione o banco</option>` + state.bancos.map(b => `<option value="${b.id}">${b.nome}</option>`).join('')
         : `<option value="">Nenhum banco cadastrado</option>`;
+
+    const listaGastos = state.gastos.length === 0
+        ? `<div class="empty">Nenhum gasto lançado ainda.</div>`
+        : state.gastos.map(g => `
+            <div class="gasto-card">
+                <div class="gasto-card-top">
+                    <div class="gasto-card-desc">${g.descricao}</div>
+                    <div class="gasto-card-valor ${g.tipo === 'debito' ? 'red' : 'blue'}">${fmt(g.valor)}</div>
+                </div>
+                <div class="gasto-card-meta">
+                    <span class="badge ${g.tipo}">${g.tipo === 'debito' ? 'Débito' : 'Crédito'}</span>
+                    <span class="gasto-card-info">📅 ${g.data}</span>
+                    ${g.banco_nome ? `<span class="gasto-card-info">🏦 ${g.banco_nome}</span>` : ''}
+                    ${g.categoria_nome ? `<span class="gasto-card-info">🏷️ ${g.categoria_nome}</span>` : ''}
+                </div>
+                <div class="gasto-card-actions">
+                    <button class="btn danger sm" onclick="removeGasto(${g.id})">Apagar</button>
+                </div>
+            </div>
+        `).join('');
 
     document.getElementById('gastos').innerHTML = `
         <div class="section">
@@ -620,27 +691,11 @@ function renderGastos() {
                 <div><label>Banco</label><select id="g-banco">${bancoOpts}</select></div>
                 <div><label>Categoria</label><select id="g-cat">${catOpts}</select></div>
             </div>
-            <button class="btn primary" onclick="addGasto()">Salvar Gasto</button>
+            <button class="btn primary btn-full" onclick="addGasto()">Salvar Gasto</button>
         </div>
         <div class="section">
-            <div class="section-title">Todos os Gastos</div>
-            <table>
-                <thead><tr><th>Data</th><th>Descrição</th><th>Banco</th><th>Categoria</th><th>Tipo</th><th>Valor</th><th></th></tr></thead>
-                <tbody>
-                    ${state.gastos.length === 0 ? `<tr><td colspan="7" class="empty">Nenhum gasto lançado.</td></tr>` :
-                    state.gastos.map(g => `
-                        <tr>
-                            <td>${g.data}</td>
-                            <td>${g.descricao}</td>
-                            <td>${g.banco_nome || '—'}</td>
-                            <td>${g.categoria_nome || '—'}</td>
-                            <td><span class="badge ${g.tipo}">${g.tipo}</span></td>
-                            <td>${fmt(g.valor)}</td>
-                            <td><button class="btn danger" onclick="removeGasto(${g.id})">Apagar</button></td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
+            <div class="section-title">Todos os Gastos <small style="font-size:12px;color:#999;font-weight:400">(${state.gastos.length})</small></div>
+            ${listaGastos}
         </div>`;
 }
 
@@ -653,7 +708,7 @@ function renderMetas() {
                 <div><label>Nome da Meta</label><input id="m-nome" placeholder="Ex: Viagem, Reserva..."></div>
                 <div><label>Valor Alvo (R$)</label><input id="m-alvo" type="text" placeholder="0,00" oninput="mascaraMoeda(this)" inputmode="numeric"></div>
             </div>
-            <button class="btn primary" onclick="addMeta()">Criar Meta</button>
+            <button class="btn primary btn-full" onclick="addMeta()">Criar Meta</button>
         </div>
         <div class="section">
             <div class="section-title">Minhas Metas</div>
@@ -668,8 +723,8 @@ function renderMetas() {
                     <div style="display:flex;justify-content:space-between;font-size:12px;color:#666;margin-bottom:6px">
                         <span>${fmt(m.poupado)} poupado</span><span>Meta: ${fmt(m.alvo)}</span>
                     </div>
-                    <div style="display:flex;gap:8px;align-items:center">
-                        <input id="dep-${m.id}" type="text" placeholder="0,00" oninput="mascaraMoeda(this)" inputmode="numeric" style="width:120px">
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                        <input id="dep-${m.id}" type="text" placeholder="0,00" oninput="mascaraMoeda(this)" inputmode="numeric" style="flex:1;min-width:100px">
                         <button class="btn sm primary" onclick="depositar(${m.id})">Depositar</button>
                         <button class="btn sm danger" onclick="removeMeta(${m.id})">Apagar</button>
                     </div>
@@ -711,26 +766,22 @@ function renderBancos() {
                 <div><label>Saldo Inicial (R$)</label><input id="b-saldo" type="text" placeholder="0,00" oninput="mascaraMoeda(this)" inputmode="numeric"></div>
                 <div><label>Limite do Cartão (R$)</label><input id="b-limite" type="text" placeholder="0,00" oninput="mascaraMoeda(this)" inputmode="numeric"></div>
             </div>
-            <button class="btn primary" onclick="addBanco()">Ativar Banco</button>
+            <button class="btn primary btn-full" onclick="addBanco()">Ativar Banco</button>
         </div>
 
         <div class="section">
             <div class="section-title">Meus Bancos Ativos</div>
-            ${state.bancos.length === 0 ? `<div class="empty">Nenhum banco ativo ainda.</div>` : `
-            <table>
-                <thead><tr><th>Cód.</th><th>Banco</th><th>Saldo</th><th>Limite</th><th></th></tr></thead>
-                <tbody>
-                    ${state.bancos.map(b => `
-                        <tr>
-                            <td><small>${b.banco_lista_id}</small></td>
-                            <td><strong>${b.nome}</strong></td>
-                            <td>${fmt(b.saldo)}</td>
-                            <td>${fmt(b.limite_credito)}</td>
-                            <td><button class="btn danger" onclick="removeBanco(${b.id})">Apagar</button></td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>`}
+            ${state.bancos.length === 0 ? `<div class="empty">Nenhum banco ativo ainda.</div>` :
+            state.bancos.map(b => `
+                <div class="banco-card" style="margin-bottom:10px">
+                    <div class="banco-card-nome">🏦 ${b.nome}</div>
+                    <div class="banco-card-row"><span class="banco-card-label">Saldo inicial</span><span>${fmt(b.saldo)}</span></div>
+                    <div class="banco-card-row"><span class="banco-card-label">Limite cartão</span><span>${fmt(b.limite_credito)}</span></div>
+                    <div style="margin-top:10px;display:flex;justify-content:flex-end">
+                        <button class="btn danger sm" onclick="removeBanco(${b.id})">Remover</button>
+                    </div>
+                </div>
+            `).join('')}
         </div>`;
 }
 
@@ -742,7 +793,7 @@ function renderCategorias() {
             <div class="form-row" style="max-width:400px">
                 <div><label>Nome</label><input id="cat-nome" placeholder="Ex: Alimentação, Lazer..."></div>
             </div>
-            <button class="btn primary" onclick="addCategoria()">Adicionar Categoria</button>
+            <button class="btn primary btn-full" onclick="addCategoria()">Adicionar Categoria</button>
         </div>
         <div class="section">
             <div class="section-title">Categorias Cadastradas</div>
