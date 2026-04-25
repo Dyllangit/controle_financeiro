@@ -158,22 +158,18 @@ const API_URL = "https://controlefinanceiro-production-e3b0.up.railway.app";
 let TOKEN = localStorage.getItem("cf_token") || null;
 let USUARIO_NOME = localStorage.getItem("cf_nome") || "";
 
+let listaBancosOficiais = [];
+
 let state = {
     gastos: [],
     metas: [],
     bancos: [],
     categorias: [],
-	listaBancosOficiais: [],
     config: { saldo: 0, limite_credito: 0 }
 };
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 
-async function carregarListaBancos() {
-    const res = await fetch(`${API_URL}/bancos-lista`, { headers: authHeaders() });
-    listaBancosOficiais = await res.json();
-    renderBancos(); // Re-renderiza para mostrar o select preenchido
-}
 
 function authHeaders() {
     return { "Content-Type": "application/json", "Authorization": `Bearer ${TOKEN}` };
@@ -264,22 +260,24 @@ if (TOKEN) {
 
 async function fetchData() {
     try {
-        const [resGastos, resMetas, resBancos, resCats, resConfig] = await Promise.all([
-            fetch(`${API_URL}/gastos`,     { headers: authHeaders() }),
-            fetch(`${API_URL}/metas`,      { headers: authHeaders() }),
-            fetch(`${API_URL}/bancos`,     { headers: authHeaders() }),
-            fetch(`${API_URL}/categorias`, { headers: authHeaders() }),
-            fetch(`${API_URL}/config`,     { headers: authHeaders() })
+        const [resGastos, resMetas, resBancos, resCats, resConfig, resBancosLista] = await Promise.all([
+            fetch(`${API_URL}/gastos`,       { headers: authHeaders() }),
+            fetch(`${API_URL}/metas`,        { headers: authHeaders() }),
+            fetch(`${API_URL}/bancos`,       { headers: authHeaders() }),
+            fetch(`${API_URL}/categorias`,   { headers: authHeaders() }),
+            fetch(`${API_URL}/config`,       { headers: authHeaders() }),
+            fetch(`${API_URL}/bancos-lista`, { headers: authHeaders() })
         ]);
 
         // Token expirado
         if (resGastos.status === 401) { logout(); return; }
 
-        state.gastos     = await resGastos.json();
-        state.metas      = await resMetas.json();
-        state.bancos     = await resBancos.json();
-        state.categorias = await resCats.json();
-        const config     = await resConfig.json();
+        state.gastos        = await resGastos.json();
+        state.metas         = await resMetas.json();
+        state.bancos        = await resBancos.json();
+        state.categorias    = await resCats.json();
+        listaBancosOficiais = await resBancosLista.json();
+        const config        = await resConfig.json();
         if (config) state.config = config;
 
         renderAll();
@@ -291,15 +289,21 @@ async function fetchData() {
 async function addGasto() {
     const bancoId = parseInt(document.getElementById('g-banco').value);
     if (!bancoId) return alert("Selecione um banco.");
+    const catId = parseInt(document.getElementById('g-cat').value);
     const g = {
-        descricao: document.getElementById('g-desc').value,
-        valor:     valorNumerico(document.getElementById('g-val')),
-        tipo:      document.getElementById('g-tipo').value,
-        categoria: document.getElementById('g-cat').value,
-        data:      document.getElementById('g-data').value,
-        banco_id:  bancoId
+        descricao:    document.getElementById('g-desc').value,
+        valor:        valorNumerico(document.getElementById('g-val')),
+        tipo:         document.getElementById('g-tipo').value,
+        id_categoria: catId || null,
+        id_banco:     bancoId,
+        data:         document.getElementById('g-data').value,
     };
-    await fetch(`${API_URL}/gastos`, { method:'POST', headers: authHeaders(), body:JSON.stringify(g) });
+    const res = await fetch(`${API_URL}/gastos`, { method:'POST', headers: authHeaders(), body:JSON.stringify(g) });
+    if (!res.ok) {
+        const data = await res.json();
+        alert(data.detail || "Erro ao salvar gasto.");
+        return;
+    }
     fetchData();
 }
 
@@ -333,8 +337,13 @@ async function addBanco() {
 }
 
 async function removeBanco(id) {
-    if (!confirm("Apagar este banco? Os gastos vinculados ficarão sem banco.")) return;
-    await fetch(`${API_URL}/bancos/${id}`, { method:'DELETE', headers: authHeaders() });
+    if (!confirm("Apagar este banco?")) return;
+    const res = await fetch(`${API_URL}/bancos/${id}`, { method:'DELETE', headers: authHeaders() });
+    if (!res.ok) {
+        const data = await res.json();
+        alert(data.detail || "Erro ao remover banco.");
+        return;
+    }
     fetchData();
 }
 
@@ -457,8 +466,8 @@ function renderPainel() {
 // ─── GASTOS ───────────────────────────────────────────────────────────────────
 function renderGastos() {
     const catOpts = state.categorias.length
-        ? state.categorias.map(c => `<option>${c.nome}</option>`).join('')
-        : `<option>Sem categorias</option>`;
+        ? state.categorias.map(c => `<option value="${c.id}">${c.nome}</option>`).join('')
+        : `<option value="">Sem categorias</option>`;
     const bancoOpts = state.bancos.length
         ? `<option value="">Selecione o banco</option>` + state.bancos.map(b => `<option value="${b.id}">${b.nome}</option>`).join('')
         : `<option value="">Nenhum banco cadastrado</option>`;
@@ -489,7 +498,7 @@ function renderGastos() {
                             <td>${g.data}</td>
                             <td>${g.descricao}</td>
                             <td>${g.banco_nome || '—'}</td>
-                            <td>${g.categoria}</td>
+                            <td>${g.categoria_nome || '—'}</td>
                             <td><span class="badge ${g.tipo}">${g.tipo}</span></td>
                             <td>${fmt(g.valor)}</td>
                             <td><button class="btn danger" onclick="removeGasto(${g.id})">Apagar</button></td>
