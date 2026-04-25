@@ -74,9 +74,9 @@ class Gasto(BaseModel):
     descricao: str
     valor: float
     tipo: str
-    categoria: str
+    id_categoria: int
+    id_banco: int
     data: date
-    banco_id: int
 
 class Meta(BaseModel):
     nome: str
@@ -112,12 +112,10 @@ def registrar(dados: Registro):
         (dados.nome, dados.email, hash_senha)
     )
     usuario_id = cursor.lastrowid
-    # Criar configuração inicial para o novo usuário
     cursor.execute(
         "INSERT INTO configuracoes (usuario_id, saldo, limite_credito) VALUES (%s, 0, 0)",
         (usuario_id,)
     )
-    # Inserir categorias padrão para o novo usuário
     cats_padrao = ['Pessoal', 'Amigos', 'Conta', 'Alimentação', 'Transporte', 'Saúde', 'Lazer', 'Outro']
     for cat in cats_padrao:
         cursor.execute("INSERT INTO categorias (nome, usuario_id) VALUES (%s, %s)", (cat, usuario_id))
@@ -142,22 +140,33 @@ def me(usuario_id: int = Depends(verificar_token)):
     cursor.execute("SELECT id, nome, email FROM usuarios WHERE id=%s", (usuario_id,))
     return cursor.fetchone()
 
-# ─── Bancos ───────────────────────────────────────────────────────────────────
+# ─── Lista Oficial de Bancos ──────────────────────────────────────────────────
+
+@app.get("/bancos-lista")
+def listar_bancos_oficiais(usuario_id: int = Depends(verificar_token)):
+    """Retorna a lista de bancos disponíveis para o usuário selecionar."""
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT id, nome FROM bancos_lista ORDER BY nome")
+    return cursor.fetchall()
+
+# ─── Bancos do Usuário ────────────────────────────────────────────────────────
 
 @app.get("/bancos")
 def listar_bancos(usuario_id: int = Depends(verificar_token)):
     db = get_db()
     cursor = db.cursor()
     query = """
-        SELECT 
-            b.id, 
-            b.saldo, 
-            b.limite_credito, 
-            bl.nome, 
-            b.banco_lista_id 
+        SELECT
+            b.id,
+            b.saldo,
+            b.limite_credito,
+            bl.nome,
+            b.banco_lista_id
         FROM bancos b
         INNER JOIN bancos_lista bl ON b.banco_lista_id = bl.id
         WHERE b.usuario_id = %s
+        ORDER BY bl.nome
     """
     cursor.execute(query, (usuario_id,))
     return cursor.fetchall()
@@ -166,6 +175,17 @@ def listar_bancos(usuario_id: int = Depends(verificar_token)):
 def criar_banco(b: Banco, usuario_id: int = Depends(verificar_token)):
     db = get_db()
     cursor = db.cursor()
+    # Verifica se o banco_lista_id existe
+    cursor.execute("SELECT id FROM bancos_lista WHERE id=%s", (b.banco_lista_id,))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=400, detail="Banco inválido.")
+    # Evita duplicar o mesmo banco para o mesmo usuário
+    cursor.execute(
+        "SELECT id FROM bancos WHERE banco_lista_id=%s AND usuario_id=%s",
+        (b.banco_lista_id, usuario_id)
+    )
+    if cursor.fetchone():
+        raise HTTPException(status_code=400, detail="Este banco já está ativo para sua conta.")
     sql = "INSERT INTO bancos (banco_lista_id, saldo, limite_credito, usuario_id) VALUES (%s, %s, %s, %s)"
     cursor.execute(sql, (b.banco_lista_id, b.saldo, b.limite_credito, usuario_id))
     return {"id": cursor.lastrowid}
@@ -175,8 +195,8 @@ def atualizar_banco(id: int, b: Banco, usuario_id: int = Depends(verificar_token
     db = get_db()
     cursor = db.cursor()
     cursor.execute(
-        "UPDATE bancos SET nome=%s, saldo=%s, limite_credito=%s WHERE id=%s AND usuario_id=%s",
-        (b.nome, b.saldo, b.limite_credito, id, usuario_id)
+        "UPDATE bancos SET saldo=%s, limite_credito=%s WHERE id=%s AND usuario_id=%s",
+        (b.saldo, b.limite_credito, id, usuario_id)
     )
     return {"ok": True}
 
@@ -184,6 +204,18 @@ def atualizar_banco(id: int, b: Banco, usuario_id: int = Depends(verificar_token
 def deletar_banco(id: int, usuario_id: int = Depends(verificar_token)):
     db = get_db()
     cursor = db.cursor()
+    # Verifica se o banco pertence ao usuário
+    cursor.execute("SELECT id FROM bancos WHERE id=%s AND usuario_id=%s", (id, usuario_id))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Banco não encontrado.")
+    # PROTEÇÃO: bloqueia deleção se houver gastos vinculados
+    cursor.execute("SELECT COUNT(*) as total FROM gastos WHERE id_banco=%s AND usuario_id=%s", (id, usuario_id))
+    resultado = cursor.fetchone()
+    if resultado and resultado["total"] > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Não é possível remover este banco pois ele possui {resultado['total']} gasto(s) vinculado(s). Apague os gastos primeiro."
+        )
     cursor.execute("DELETE FROM bancos WHERE id=%s AND usuario_id=%s", (id, usuario_id))
     return {"ok": True}
 
@@ -216,15 +248,15 @@ def deletar_categoria(id: int, usuario_id: int = Depends(verificar_token)):
 def listar_gastos(usuario_id: int = Depends(verificar_token)):
     db = get_db()
     cursor = db.cursor()
-    # Note que agora fazemos JOIN com bancos (b) E bancos_lista (bl)
     query = """
-        SELECT 
-            g.*, 
-            c.nome as categoria_nome, 
+        SELECT
+            g.id, g.valor, g.descricao, g.data, g.pago, g.tipo,
+            g.id_categoria, g.id_banco,
+            c.nome as categoria_nome,
             bl.nome as banco_nome
         FROM gastos g
-        LEFT JOIN categorias c ON g.categoria_id = c.id
-        LEFT JOIN bancos b ON g.banco_id = b.id
+        LEFT JOIN categorias c ON g.id_categoria = c.id
+        LEFT JOIN bancos b ON g.id_banco = b.id
         LEFT JOIN bancos_lista bl ON b.banco_lista_id = bl.id
         WHERE g.usuario_id = %s
         ORDER BY g.data DESC
@@ -236,9 +268,13 @@ def listar_gastos(usuario_id: int = Depends(verificar_token)):
 def criar_gasto(g: Gasto, usuario_id: int = Depends(verificar_token)):
     db = get_db()
     cursor = db.cursor()
+    # Verifica se o banco pertence ao usuário
+    cursor.execute("SELECT id FROM bancos WHERE id=%s AND usuario_id=%s", (g.id_banco, usuario_id))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=400, detail="Banco inválido.")
     cursor.execute(
-        "INSERT INTO gastos (descricao, valor, tipo, categoria, data, banco_id, usuario_id) VALUES (%s,%s,%s,%s,%s,%s,%s)",
-        (g.descricao, g.valor, g.tipo, g.categoria, g.data, g.banco_id, usuario_id)
+        "INSERT INTO gastos (descricao, valor, tipo, id_categoria, id_banco, data, usuario_id) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+        (g.descricao, g.valor, g.tipo, g.id_categoria, g.id_banco, g.data, usuario_id)
     )
     return {"id": cursor.lastrowid}
 
