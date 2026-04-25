@@ -658,26 +658,6 @@ function renderGastos() {
         ? `<option value="">Selecione o banco</option>` + state.bancos.map(b => `<option value="${b.id}">${b.nome}</option>`).join('')
         : `<option value="">Nenhum banco cadastrado</option>`;
 
-    const listaGastos = state.gastos.length === 0
-        ? `<div class="empty">Nenhum gasto lançado ainda.</div>`
-        : state.gastos.map(g => `
-            <div class="gasto-card">
-                <div class="gasto-card-top">
-                    <div class="gasto-card-desc">${g.descricao}</div>
-                    <div class="gasto-card-valor ${g.tipo === 'debito' ? 'red' : 'blue'}">${fmt(g.valor)}</div>
-                </div>
-                <div class="gasto-card-meta">
-                    <span class="badge ${g.tipo}">${g.tipo === 'debito' ? 'Débito' : 'Crédito'}</span>
-                    <span class="gasto-card-info">📅 ${g.data}</span>
-                    ${g.banco_nome ? `<span class="gasto-card-info">🏦 ${g.banco_nome}</span>` : ''}
-                    ${g.categoria_nome ? `<span class="gasto-card-info">🏷️ ${g.categoria_nome}</span>` : ''}
-                </div>
-                <div class="gasto-card-actions">
-                    <button class="btn danger sm" onclick="removeGasto(${g.id})">Apagar</button>
-                </div>
-            </div>
-        `).join('');
-
     document.getElementById('gastos').innerHTML = `
         <div class="section">
             <div class="section-title">Novo Gasto</div>
@@ -694,8 +674,39 @@ function renderGastos() {
             <button class="btn primary btn-full" onclick="addGasto()">Salvar Gasto</button>
         </div>
         <div class="section">
-            <div class="section-title">Todos os Gastos <small style="font-size:12px;color:#999;font-weight:400">(${state.gastos.length})</small></div>
-            ${listaGastos}
+            <div class="section-title">
+                Todos os Gastos
+                <small style="font-size:12px;color:#999;font-weight:400">${state.gastos.length} registro(s)</small>
+            </div>
+            ${state.gastos.length === 0
+                ? `<div class="empty">Nenhum gasto lançado ainda.</div>`
+                : `<div class="table-wrap"><table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Descrição</th>
+                            <th>Banco</th>
+                            <th>Categoria</th>
+                            <th>Tipo</th>
+                            <th>Valor</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${state.gastos.map(g => `
+                            <tr>
+                                <td style="white-space:nowrap">${g.data}</td>
+                                <td>${g.descricao}</td>
+                                <td style="white-space:nowrap">${g.banco_nome || '—'}</td>
+                                <td>${g.categoria_nome || '—'}</td>
+                                <td><span class="badge ${g.tipo}">${g.tipo === 'debito' ? 'Débito' : 'Crédito'}</span></td>
+                                <td style="white-space:nowrap" class="${g.tipo === 'debito' ? 'red' : 'blue'}">${fmt(g.valor)}</td>
+                                <td><button class="btn danger sm" onclick="removeGasto(${g.id})">Apagar</button></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table></div>`
+            }
         </div>`;
 }
 
