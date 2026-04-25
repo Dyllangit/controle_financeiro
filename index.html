@@ -80,45 +80,70 @@
         .tag-outro{background:#f5f5f5;color:#555}
 
         /* ── Loading Overlay ── */
-        #loading-overlay{
-            display:none;position:fixed;inset:0;background:rgba(255,255,255,.78);
-            backdrop-filter:blur(3px);z-index:9999;
-            flex-direction:column;align-items:center;justify-content:center;gap:14px
+        #loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(255,255,255,0.82);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
         }
-        #loading-overlay.visible{display:flex}
-        .loading-spinner{
-            width:44px;height:44px;border:4px solid #e0e0e0;
-            border-top-color:#333;border-radius:50%;
-            animation:spin .75s linear infinite
+        #loading-overlay.ativo { display: flex; }
+        .spinner {
+            width: 46px; height: 46px;
+            border: 5px solid #ddd;
+            border-top-color: #333;
+            border-radius: 50%;
+            animation: giro 0.7s linear infinite;
         }
-        @keyframes spin{to{transform:rotate(360deg)}}
-        .loading-text{font-size:14px;color:#555;font-weight:500}
+        @keyframes giro { to { transform: rotate(360deg); } }
+        .loading-msg {
+            font-size: 15px;
+            color: #444;
+            font-weight: 500;
+        }
 
         /* ── Toast ── */
-        #toast{
-            position:fixed;bottom:28px;left:50%;
-            transform:translateX(-50%) translateY(16px);
-            padding:11px 24px;border-radius:8px;
-            font-size:14px;font-weight:500;color:#fff;
-            z-index:10000;box-shadow:0 4px 16px rgba(0,0,0,.22);
-            opacity:0;pointer-events:none;white-space:nowrap;
-            transition:opacity .25s ease, transform .25s ease
+        #toast {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            z-index: 10000;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease, bottom 0.3s ease;
         }
-        #toast.success{background:#1a7f4b}
-        #toast.error{background:#c0392b}
-        #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+        #toast.visivel {
+            opacity: 1;
+            bottom: 40px;
+        }
+        #toast.ok  { background: #1a7f4b; }
+        #toast.err { background: #c0392b; }
     </style>
 </head>
 <body>
 
-<!-- Loading Overlay -->
+<!-- ── Loading Overlay ── -->
 <div id="loading-overlay">
-    <div class="loading-spinner"></div>
-    <div class="loading-text" id="loading-text">Aguarde...</div>
+    <div class="spinner"></div>
+    <div class="loading-msg" id="loading-msg">Aguarde...</div>
 </div>
 
-<!-- Toast de feedback -->
+<!-- ── Toast ── -->
 <div id="toast"></div>
+
 
 <!-- ══════════════ TELA DE AUTH ══════════════ -->
 <div id="auth-screen">
@@ -194,26 +219,35 @@
 const API_URL = "https://controlefinanceiro-production-e3b0.up.railway.app";
 
 // ─── Loading & Toast ──────────────────────────────────────────────────────────
+
+function mostrarLoading(msg) {
+    document.getElementById('loading-msg').textContent = msg || 'Aguarde...';
+    document.getElementById('loading-overlay').classList.add('ativo');
+}
+
+function esconderLoading() {
+    document.getElementById('loading-overlay').classList.remove('ativo');
+}
+
 let _toastTimer = null;
-
-function showLoading(msg = "Aguarde...") {
-    document.getElementById("loading-text").textContent = msg;
-    document.getElementById("loading-overlay").classList.add("visible");
-}
-
-function hideLoading() {
-    document.getElementById("loading-overlay").classList.remove("visible");
-}
-
-function showToast(msg, type = "success") {
-    const el = document.getElementById("toast");
+function mostrarToast(msg, tipo) {
+    // tipo: 'ok' ou 'err'
+    const el = document.getElementById('toast');
+    // Remove classes anteriores e reinicia
+    el.className = '';
     el.textContent = msg;
-    el.className = type;           // reseta classes
-    void el.offsetWidth;          // força reflow para reiniciar transição
-    el.classList.add("show");
+    // Força o browser a processar a remoção antes de adicionar novamente
+    requestAnimationFrame(() => {
+        el.classList.add(tipo || 'ok');
+        el.classList.add('visivel');
+    });
     if (_toastTimer) clearTimeout(_toastTimer);
-    _toastTimer = setTimeout(() => el.classList.remove("show"), 2800);
+    _toastTimer = setTimeout(() => {
+        el.classList.remove('visivel');
+    }, 3000);
 }
+
+
 
 let TOKEN = localStorage.getItem("cf_token") || null;
 let USUARIO_NOME = localStorage.getItem("cf_nome") || "";
@@ -229,7 +263,6 @@ let state = {
 };
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
-
 
 function authHeaders() {
     return { "Content-Type": "application/json", "Authorization": `Bearer ${TOKEN}` };
@@ -319,7 +352,7 @@ if (TOKEN) {
 // ─── API ──────────────────────────────────────────────────────────────────────
 
 async function fetchData() {
-    showLoading("Carregando dados...");
+    mostrarLoading('Carregando dados...');
     try {
         const [resGastos, resMetas, resBancos, resCats, resConfig, resBancosLista] = await Promise.all([
             fetch(`${API_URL}/gastos`,       { headers: authHeaders() }),
@@ -330,8 +363,7 @@ async function fetchData() {
             fetch(`${API_URL}/bancos-lista`, { headers: authHeaders() })
         ]);
 
-        // Token expirado
-        if (resGastos.status === 401) { hideLoading(); logout(); return; }
+        if (resGastos.status === 401) { esconderLoading(); logout(); return; }
 
         state.gastos        = await resGastos.json();
         state.metas         = await resMetas.json();
@@ -343,16 +375,16 @@ async function fetchData() {
 
         renderAll();
     } catch (e) {
-        console.error("Erro ao buscar dados da API:", e);
-        showToast("Erro de conexão com o servidor.", "error");
+        console.error('Erro ao buscar dados da API:', e);
+        mostrarToast('Erro de conexão com o servidor.', 'err');
     } finally {
-        hideLoading();
+        esconderLoading();
     }
 }
 
 async function addGasto() {
     const bancoId = parseInt(document.getElementById('g-banco').value);
-    if (!bancoId) return showToast("Selecione um banco.", "error");
+    if (!bancoId) return mostrarToast('Selecione um banco.', 'err');
     const catId = parseInt(document.getElementById('g-cat').value);
     const g = {
         descricao:    document.getElementById('g-desc').value,
@@ -362,66 +394,49 @@ async function addGasto() {
         id_banco:     bancoId,
         data:         document.getElementById('g-data').value,
     };
-    showLoading("Salvando gasto...");
+    mostrarLoading('Salvando gasto...');
     try {
         const res = await fetch(`${API_URL}/gastos`, { method:'POST', headers: authHeaders(), body:JSON.stringify(g) });
-        if (!res.ok) {
-            const data = await res.json();
-            showToast(data.detail || "Erro ao salvar gasto.", "error");
-            return;
-        }
+        if (!res.ok) { const d = await res.json(); mostrarToast(d.detail || 'Erro ao salvar.', 'err'); return; }
         await fetchData();
-        showToast("Gasto salvo com sucesso! ✓");
-    } catch(e) {
-        showToast("Erro de conexão.", "error");
-    } finally {
-        hideLoading();
-    }
+        mostrarToast('Gasto salvo com sucesso! ✓', 'ok');
+    } catch(e) { mostrarToast('Erro de conexão.', 'err'); }
+    finally { esconderLoading(); }
 }
 
 async function removeGasto(id) {
-    if (!confirm("Apagar este gasto?")) return;
-    showLoading("Apagando gasto...");
+    if (!confirm('Apagar este gasto?')) return;
+    mostrarLoading('Apagando gasto...');
     try {
         await fetch(`${API_URL}/gastos/${id}`, { method:'DELETE', headers: authHeaders() });
         await fetchData();
-        showToast("Gasto removido. ✓");
-    } catch(e) {
-        showToast("Erro ao remover gasto.", "error");
-    } finally {
-        hideLoading();
-    }
+        mostrarToast('Gasto removido. ✓', 'ok');
+    } catch(e) { mostrarToast('Erro ao remover.', 'err'); }
+    finally { esconderLoading(); }
 }
 
 async function addMeta() {
     const m = { nome: document.getElementById('m-nome').value, alvo: valorNumerico(document.getElementById('m-alvo')) };
-    if (!m.nome) return showToast("Informe o nome da meta.", "error");
-    if (!m.alvo) return showToast("Informe o valor alvo.", "error");
-    showLoading("Criando meta...");
+    if (!m.nome) return mostrarToast('Informe o nome da meta.', 'err');
+    mostrarLoading('Criando meta...');
     try {
         await fetch(`${API_URL}/metas`, { method:'POST', headers: authHeaders(), body:JSON.stringify(m) });
         await fetchData();
-        showToast("Meta criada com sucesso! ✓");
-    } catch(e) {
-        showToast("Erro ao criar meta.", "error");
-    } finally {
-        hideLoading();
-    }
+        mostrarToast('Meta criada! ✓', 'ok');
+    } catch(e) { mostrarToast('Erro ao criar meta.', 'err'); }
+    finally { esconderLoading(); }
 }
 
 async function depositar(id) {
     const valor = valorNumerico(document.getElementById(`dep-${id}`));
-    if (!valor) return showToast("Informe o valor do depósito.", "error");
-    showLoading("Registrando depósito...");
+    if (!valor) return mostrarToast('Informe o valor do depósito.', 'err');
+    mostrarLoading('Registrando depósito...');
     try {
         await fetch(`${API_URL}/metas/${id}/depositar`, { method:'POST', headers: authHeaders(), body:JSON.stringify({ valor }) });
         await fetchData();
-        showToast("Depósito registrado! ✓");
-    } catch(e) {
-        showToast("Erro ao depositar.", "error");
-    } finally {
-        hideLoading();
-    }
+        mostrarToast('Depósito registrado! ✓', 'ok');
+    } catch(e) { mostrarToast('Erro ao depositar.', 'err'); }
+    finally { esconderLoading(); }
 }
 
 async function addBanco() {
@@ -430,70 +445,50 @@ async function addBanco() {
         saldo:          valorNumerico(document.getElementById('b-saldo')),
         limite_credito: valorNumerico(document.getElementById('b-limite'))
     };
-    if (!b.banco_lista_id) return showToast("Selecione um banco.", "error");
-    showLoading("Ativando banco...");
+    if (!b.banco_lista_id) return mostrarToast('Selecione um banco.', 'err');
+    mostrarLoading('Ativando banco...');
     try {
         const res = await fetch(`${API_URL}/bancos`, { method:'POST', headers: authHeaders(), body:JSON.stringify(b) });
-        if (!res.ok) {
-            const data = await res.json();
-            showToast(data.detail || "Erro ao ativar banco.", "error");
-            return;
-        }
+        if (!res.ok) { const d = await res.json(); mostrarToast(d.detail || 'Erro ao ativar banco.', 'err'); return; }
         await fetchData();
-        showToast("Banco ativado com sucesso! ✓");
-    } catch(e) {
-        showToast("Erro ao ativar banco.", "error");
-    } finally {
-        hideLoading();
-    }
+        mostrarToast('Banco ativado! ✓', 'ok');
+    } catch(e) { mostrarToast('Erro ao ativar banco.', 'err'); }
+    finally { esconderLoading(); }
 }
 
 async function removeBanco(id) {
-    if (!confirm("Apagar este banco?")) return;
-    showLoading("Removendo banco...");
+    if (!confirm('Apagar este banco?')) return;
+    mostrarLoading('Removendo banco...');
     try {
         const res = await fetch(`${API_URL}/bancos/${id}`, { method:'DELETE', headers: authHeaders() });
-        if (!res.ok) {
-            const data = await res.json();
-            showToast(data.detail || "Erro ao remover banco.", "error");
-            return;
-        }
+        if (!res.ok) { const d = await res.json(); mostrarToast(d.detail || 'Não foi possível remover.', 'err'); return; }
         await fetchData();
-        showToast("Banco removido. ✓");
-    } catch(e) {
-        showToast("Erro ao remover banco.", "error");
-    } finally {
-        hideLoading();
-    }
+        mostrarToast('Banco removido. ✓', 'ok');
+    } catch(e) { mostrarToast('Erro ao remover banco.', 'err'); }
+    finally { esconderLoading(); }
 }
 
 async function addCategoria() {
     const nome = document.getElementById('cat-nome').value.trim();
-    if (!nome) return showToast("Informe o nome da categoria.", "error");
-    showLoading("Adicionando categoria...");
+    if (!nome) return mostrarToast('Informe o nome da categoria.', 'err');
+    mostrarLoading('Adicionando categoria...');
     try {
         await fetch(`${API_URL}/categorias`, { method:'POST', headers: authHeaders(), body:JSON.stringify({ nome }) });
         await fetchData();
-        showToast("Categoria adicionada! ✓");
-    } catch(e) {
-        showToast("Erro ao adicionar categoria.", "error");
-    } finally {
-        hideLoading();
-    }
+        mostrarToast('Categoria adicionada! ✓', 'ok');
+    } catch(e) { mostrarToast('Erro ao adicionar.', 'err'); }
+    finally { esconderLoading(); }
 }
 
 async function removeCategoria(id) {
-    if (!confirm("Apagar esta categoria?")) return;
-    showLoading("Removendo categoria...");
+    if (!confirm('Apagar esta categoria?')) return;
+    mostrarLoading('Removendo categoria...');
     try {
         await fetch(`${API_URL}/categorias/${id}`, { method:'DELETE', headers: authHeaders() });
         await fetchData();
-        showToast("Categoria removida. ✓");
-    } catch(e) {
-        showToast("Erro ao remover categoria.", "error");
-    } finally {
-        hideLoading();
-    }
+        mostrarToast('Categoria removida. ✓', 'ok');
+    } catch(e) { mostrarToast('Erro ao remover.', 'err'); }
+    finally { esconderLoading(); }
 }
 
 async function salvarConfig() {
@@ -501,16 +496,13 @@ async function salvarConfig() {
         saldo:          parseFloat(document.getElementById('c-saldo').value),
         limite_credito: parseFloat(document.getElementById('c-limite').value)
     };
-    showLoading("Salvando configurações...");
+    mostrarLoading('Salvando...');
     try {
         await fetch(`${API_URL}/config`, { method:'PUT', headers: authHeaders(), body:JSON.stringify(conf) });
         await fetchData();
-        showToast("Configurações salvas! ✓");
-    } catch(e) {
-        showToast("Erro ao salvar configurações.", "error");
-    } finally {
-        hideLoading();
-    }
+        mostrarToast('Configurações salvas! ✓', 'ok');
+    } catch(e) { mostrarToast('Erro ao salvar.', 'err'); }
+    finally { esconderLoading(); }
 }
 
 // ─── UI ───────────────────────────────────────────────────────────────────────
@@ -610,7 +602,7 @@ function renderPainel() {
 function renderGastos() {
     const catOpts = state.categorias.length
         ? state.categorias.map(c => `<option value="${c.id}">${c.nome}</option>`).join('')
-        : `<option value="">Sem categorias</option>`;
+        : `<option>Sem categorias</option>`;
     const bancoOpts = state.bancos.length
         ? `<option value="">Selecione o banco</option>` + state.bancos.map(b => `<option value="${b.id}">${b.nome}</option>`).join('')
         : `<option value="">Nenhum banco cadastrado</option>`;
@@ -688,24 +680,22 @@ function renderMetas() {
 }
 
 async function removeMeta(id) {
-    if (!confirm("Apagar esta meta?")) return;
-    showLoading("Removendo meta...");
+    if (!confirm('Apagar esta meta?')) return;
+    mostrarLoading('Removendo meta...');
     try {
         await fetch(`${API_URL}/metas/${id}`, { method:'DELETE', headers: authHeaders() });
         await fetchData();
-        showToast("Meta removida. ✓");
-    } catch(e) {
-        showToast("Erro ao remover meta.", "error");
-    } finally {
-        hideLoading();
-    }
+        mostrarToast('Meta removida. ✓', 'ok');
+    } catch(e) { mostrarToast('Erro ao remover.', 'err'); }
+    finally { esconderLoading(); }
 }
 
 // ─── BANCOS ───────────────────────────────────────────────────────────────────
 function renderBancos() {
-    const opcoesBancos = listaBancosOficiais.length > 0 
-        ? listaBancosOficiais.map(bl => `<option value="${bl.id}">${bl.id} - ${bl.nome}</option>`).join('')
+    const opcoesBancos = listaBancosOficiais.length > 0
+        ? listaBancosOficiais.map(bl => `<option value="${bl.id}">${bl.nome}</option>`).join('')
         : `<option value="">Carregando lista de bancos...</option>`;
+
 
     document.getElementById('bancos').innerHTML = `
         <div class="section">
