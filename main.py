@@ -250,7 +250,7 @@ def listar_gastos(usuario_id: int = Depends(verificar_token)):
     cursor = db.cursor()
     query = """
         SELECT
-            g.id, g.valor, g.descricao, g.data, g.pago, g.tipo,
+            g.id, g.valor, g.descricao, g.data, g.tipo,
             g.id_categoria, g.id_banco,
             c.nome as categoria_nome,
             bl.nome as banco_nome
