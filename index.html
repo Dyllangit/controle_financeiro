@@ -533,7 +533,7 @@ function renderPainel() {
     const saldoAtual   = totalSaldoCadastrado - totalDebito + totalEntrada;
 
     const porBanco = state.bancos.map(banco => {
-        const gastosB  = state.gastos.filter(g => g.banco_id === banco.id);
+        const gastosB  = state.gastos.filter(g => g.id_banco === banco.id);
         const debitoB  = gastosB.filter(g => g.tipo === 'debito').reduce((a, b) => a + b.valor, 0);
         const entradaB = gastosB.filter(g => g.tipo === 'entrada').reduce((a, b) => a + b.valor, 0);
         const creditoB = gastosB.filter(g => g.tipo === 'credito').reduce((a, b) => a + b.valor, 0);
