@@ -687,6 +687,7 @@ function editarBanco(id) {
     const b = state.bancos.find(x => x.id === id);
     document.getElementById(`be-saldo-${id}`).value = b.saldo.toFixed(2).replace('.', ',');
     document.getElementById(`be-limite-${id}`).value = b.limite_credito.toFixed(2).replace('.', ',');
+    document.getElementById(`be-saldo-${id}`).focus();
 }
 
 function cancelarEditBanco() {
@@ -695,15 +696,20 @@ function cancelarEditBanco() {
 }
 
 async function salvarBanco(id) {
-    const b = {
-        nome:           document.getElementById(`be-nome-${id}`).value.trim(),
-        saldo:          valorNumerico(document.getElementById(`be-saldo-${id}`)),
-        limite_credito: valorNumerico(document.getElementById(`be-limite-${id}`))
-    };
-    if (!b.nome) return alert("Informe o nome do banco.");
-    await fetch(`${API_URL}/bancos/${id}`, { method:'PUT', headers: authHeaders(), body: JSON.stringify(b) });
-    editandoBancoId = null;
-    fetchData();
+    const banco = state.bancos.find(x => x.id === id);
+    const saldo = valorNumerico(document.getElementById(`be-saldo-${id}`));
+    const limite = valorNumerico(document.getElementById(`be-limite-${id}`));
+    if (saldo < 0) return mostrarToast('Saldo não pode ser negativo.', 'err');
+    const b = { banco_lista_id: banco.banco_lista_id, saldo, limite_credito: limite };
+    mostrarLoading('Salvando banco...');
+    try {
+        const res = await fetch(`${API_URL}/bancos/${id}`, { method:'PUT', headers: authHeaders(), body: JSON.stringify(b) });
+        if (!res.ok) { const d = await res.json(); mostrarToast(d.detail || 'Erro ao salvar.', 'err'); return; }
+        editandoBancoId = null;
+        await fetchData();
+        mostrarToast('Banco atualizado! ✓', 'ok');
+    } catch(e) { mostrarToast('Erro de conexão.', 'err'); }
+    finally { esconderLoading(); }
 }
 
 function renderBancos() {
@@ -738,7 +744,7 @@ function renderBancos() {
                 <tbody>
                     ${state.bancos.map(b => editandoBancoId === b.id ? `
                         <tr>
-                            <td><input id="be-nome-${b.id}" value="${b.nome}" style="width:100%"></td>
+                            <td><strong>${b.nome}</strong></td>
                             <td><input id="be-saldo-${b.id}" type="text" placeholder="0,00" oninput="mascaraMoeda(this)" inputmode="numeric" style="width:100%"></td>
                             <td><input id="be-limite-${b.id}" type="text" placeholder="0,00" oninput="mascaraMoeda(this)" inputmode="numeric" style="width:100%"></td>
                             <td style="white-space:nowrap">
