@@ -475,10 +475,42 @@ async function fetchData() {
     }
 }
 
+function onTipoChange() {
+    const tipo = document.getElementById('g-tipo').value;
+    const transf = document.getElementById('g-transf-fields');
+    const bancoLabel = document.getElementById('g-banco-label');
+    if (transf) transf.style.display = tipo === 'transferencia' ? 'grid' : 'none';
+    if (bancoLabel) bancoLabel.textContent = tipo === 'transferencia' ? 'Banco Origem' : 'Banco';
+}
+
 async function addGasto() {
+    const tipo = document.getElementById('g-tipo').value;
     const bancoId = parseInt(document.getElementById('g-banco').value);
     if (!bancoId) return mostrarToast('Selecione um banco.', 'err');
     const catId = parseInt(document.getElementById('g-cat').value);
+
+    if (tipo === 'transferencia') {
+        const bancoDest = parseInt(document.getElementById('g-banco-destino').value);
+        if (!bancoDest) return mostrarToast('Selecione o banco de destino.', 'err');
+        if (bancoDest === bancoId) return mostrarToast('Banco de destino deve ser diferente do de origem.', 'err');
+        const valor = valorNumerico(document.getElementById('g-val'));
+        if (!valor) return mostrarToast('Informe o valor da transferência.', 'err');
+        const taxa = valorNumerico(document.getElementById('g-taxa'));
+        const data = document.getElementById('g-data').value;
+        mostrarLoading('Registrando transferência...');
+        try {
+            const res = await fetch(`${API_URL}/transferencias`, {
+                method: 'POST', headers: authHeaders(),
+                body: JSON.stringify({ valor, taxa, id_banco_origem: bancoId, id_banco_destino: bancoDest, id_categoria: catId || null, data })
+            });
+            if (!res.ok) { const d = await res.json(); mostrarToast(d.detail || 'Erro na transferência.', 'err'); return; }
+            await fetchData();
+            mostrarToast('Transferência registrada! ✓', 'ok');
+        } catch(e) { mostrarToast('Erro de conexão.', 'err'); }
+        finally { esconderLoading(); }
+        return;
+    }
+
     const g = {
         descricao:    document.getElementById('g-desc').value,
         valor:        valorNumerico(document.getElementById('g-val')),
@@ -707,18 +739,27 @@ function renderGastos() {
 
     document.getElementById('gastos').innerHTML = `
         <div class="section">
-            <div class="section-title">Novo Gasto</div>
+            <div class="section-title">Novo Lançamento</div>
             <div class="form-row three">
                 <div><label>Descrição</label><input id="g-desc" placeholder="Ex: Mercado"></div>
                 <div><label>Valor (R$)</label><input id="g-val" type="text" placeholder="0,00" oninput="mascaraMoeda(this)" inputmode="numeric"></div>
                 <div><label>Data</label><input id="g-data" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
             </div>
             <div class="form-row three">
-                <div><label>Tipo</label><select id="g-tipo"><option value="debito">Débito (sai do saldo)</option><option value="credito">Crédito (fatura)</option><option value="entrada">Entrada (entra no saldo)</option></select></div>
-                <div><label>Banco</label><select id="g-banco">${bancoOpts}</select></div>
+                <div><label>Tipo</label><select id="g-tipo" onchange="onTipoChange()">
+                    <option value="debito">Débito (sai do saldo)</option>
+                    <option value="credito">Crédito (fatura)</option>
+                    <option value="entrada">Entrada (entra no saldo)</option>
+                    <option value="transferencia">Transferência entre bancos</option>
+                </select></div>
+                <div><label id="g-banco-label">Banco</label><select id="g-banco">${bancoOpts}</select></div>
                 <div><label>Categoria</label><select id="g-cat">${catOpts}</select></div>
             </div>
-            <button class="btn primary btn-full" onclick="addGasto()">Salvar Gasto</button>
+            <div id="g-transf-fields" class="form-row" style="display:none">
+                <div><label>Banco Destino</label><select id="g-banco-destino">${bancoOpts}</select></div>
+                <div><label>Taxa de Transferência (R$)</label><input id="g-taxa" type="text" placeholder="0,00" oninput="mascaraMoeda(this)" inputmode="numeric"></div>
+            </div>
+            <button class="btn primary btn-full" onclick="addGasto()">Salvar</button>
         </div>
         <div class="section">
             <div class="section-title">Todos os Gastos</div>
