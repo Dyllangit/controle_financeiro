@@ -481,6 +481,17 @@ function onTipoChange() {
     const bancoLabel = document.getElementById('g-banco-label');
     if (transf) transf.style.display = tipo === 'transferencia' ? 'grid' : 'none';
     if (bancoLabel) bancoLabel.textContent = tipo === 'transferencia' ? 'Banco Origem' : 'Banco';
+    if (tipo === 'transferencia') atualizarBancoDestino();
+}
+
+function atualizarBancoDestino() {
+    const origemId = parseInt(document.getElementById('g-banco').value);
+    const destEl = document.getElementById('g-banco-destino');
+    if (!destEl) return;
+    const bancosDisponiveis = state.bancos.filter(b => b.id !== origemId);
+    destEl.innerHTML = bancosDisponiveis.length
+        ? `<option value="">Selecione o banco</option>` + bancosDisponiveis.map(b => `<option value="${b.id}">${b.nome}</option>`).join('')
+        : `<option value="">Nenhum outro banco disponível</option>`;
 }
 
 async function addGasto() {
@@ -752,7 +763,7 @@ function renderGastos() {
                     <option value="entrada">Entrada (entra no saldo)</option>
                     <option value="transferencia">Transferência entre bancos</option>
                 </select></div>
-                <div><label id="g-banco-label">Banco</label><select id="g-banco">${bancoOpts}</select></div>
+                <div><label id="g-banco-label">Banco</label><select id="g-banco" onchange="atualizarBancoDestino()">${bancoOpts}</select></div>
                 <div><label>Categoria</label><select id="g-cat">${catOpts}</select></div>
             </div>
             <div id="g-transf-fields" class="form-row" style="display:none">
