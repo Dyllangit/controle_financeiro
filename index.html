@@ -116,25 +116,94 @@
         .tag-outro{background:#f5f5f5;color:#555}
 
         /* ── Loading Overlay ── */
-        #loading-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+        #loading-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
         #loading-overlay.ativo{display:flex}
-        .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+        .loading-card{background:#fff;border-radius:14px;padding:2rem 2.5rem;display:flex;flex-direction:column;align-items:center;gap:16px;box-shadow:0 8px 32px rgba(0,0,0,.2);min-width:220px;text-align:center}
+        .spinner{width:40px;height:40px;border:4px solid #eee;border-top-color:#333;border-radius:50%;animation:spin .7s linear infinite}
         @keyframes spin{to{transform:rotate(360deg)}}
-        .loading-msg{color:#fff;font-size:15px;font-weight:500}
+        .loading-msg{color:#333;font-size:15px;font-weight:500}
+
+        /* ── Confirm Dialog ── */
+        #confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1050;align-items:center;justify-content:center;padding:1rem}
+        #confirm-overlay.ativo{display:flex}
+        .confirm-card{background:#fff;border-radius:14px;padding:2rem;max-width:360px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.2);text-align:center}
+        .confirm-icone{font-size:32px;margin-bottom:.5rem}
+        .confirm-msg{font-size:15px;color:#333;margin-bottom:1.5rem;line-height:1.5}
+        .confirm-btns{display:flex;gap:10px;justify-content:center}
 
         /* ── Toast ── */
         #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:#333;color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;white-space:nowrap;z-index:1100;box-shadow:0 4px 16px rgba(0,0,0,.25)}
         #toast.visivel{opacity:1;transform:translateX(-50%) translateY(0)}
         #toast.toast-ok{background:#28a745}
         #toast.toast-err{background:#dc3545}
+
+        /* ── Dark Theme ── */
+        body.dark{background:#111827;color:#e5e7eb}
+        body.dark .app{background:#1f2937;box-shadow:0 2px 10px rgba(0,0,0,.4)}
+        body.dark .auth-box{background:#1f2937}
+        body.dark .auth-field input{background:#111827;border-color:#374151;color:#e5e7eb}
+        body.dark .auth-field label{color:#9ca3af}
+        body.dark .auth-logo p{color:#9ca3af}
+        body.dark .auth-tab{color:#9ca3af}
+        body.dark .auth-tab.active{color:#e5e7eb;border-color:#e5e7eb}
+        body.dark .auth-tabs{border-color:#374151}
+        body.dark .topbar{border-color:#374151}
+        body.dark .topbar-user{color:#9ca3af}
+        body.dark .topbar-user strong{color:#e5e7eb}
+        body.dark .tabs{border-color:#374151}
+        body.dark .tab{color:#9ca3af}
+        body.dark .tab.active{color:#f9fafb;border-color:#f9fafb}
+        body.dark .section{border-color:#374151}
+        body.dark .section-title{border-color:#374151;color:#e5e7eb}
+        body.dark .card{background:#111827;border-color:#374151}
+        body.dark .card-label{color:#9ca3af}
+        body.dark label{color:#9ca3af}
+        body.dark input,body.dark select{background:#111827;border-color:#374151;color:#e5e7eb}
+        body.dark .btn{background:#374151;border-color:#4b5563;color:#e5e7eb}
+        body.dark .btn.primary{background:#e5e7eb;color:#111827;border-color:transparent}
+        body.dark .btn.danger{background:transparent;border-color:#dc3545;color:#f87171}
+        body.dark th{color:#9ca3af;border-color:#374151}
+        body.dark td{border-color:#374151}
+        body.dark .badge.debito{background:#4a1212;color:#fca5a5}
+        body.dark .badge.credito{background:#1e3a5f;color:#93c5fd}
+        body.dark .badge.entrada{background:#14532d;color:#86efac}
+        body.dark .progress-bar{background:#374151}
+        body.dark .banco-card{background:#111827;border-color:#374151}
+        body.dark .banco-card-nome{color:#e5e7eb}
+        body.dark .banco-card-label{color:#9ca3af}
+        body.dark .gasto-card{background:#111827;border-color:#374151}
+        body.dark .gasto-card-info{color:#9ca3af}
+        body.dark .chip{background:#374151;color:#e5e7eb}
+        body.dark .empty{color:#6b7280}
+        body.dark .divider{background:#374151}
+        body.dark .loading-card{background:#1f2937}
+        body.dark .loading-msg{color:#e5e7eb}
+        body.dark .spinner{border-color:#374151;border-top-color:#e5e7eb}
+        body.dark .confirm-card{background:#1f2937}
+        body.dark .confirm-msg{color:#e5e7eb}
+        body.dark #tema-btn{color:#fbbf24}
     </style>
 </head>
 <body>
 
 <!-- ── Loading Overlay ── -->
 <div id="loading-overlay">
-    <div class="spinner"></div>
-    <div class="loading-msg" id="loading-msg">Aguarde...</div>
+    <div class="loading-card">
+        <div class="spinner"></div>
+        <div class="loading-msg" id="loading-msg">Aguarde...</div>
+    </div>
+</div>
+
+<!-- ── Confirm Dialog ── -->
+<div id="confirm-overlay">
+    <div class="confirm-card">
+        <div class="confirm-icone">⚠️</div>
+        <div class="confirm-msg" id="confirm-msg">Tem certeza?</div>
+        <div class="confirm-btns">
+            <button class="btn danger" id="confirm-ok">Confirmar</button>
+            <button class="btn" id="confirm-cancel">Cancelar</button>
+        </div>
+    </div>
 </div>
 
 <!-- ── Toast ── -->
@@ -192,7 +261,10 @@
 <div class="app">
     <div class="topbar">
         <div class="topbar-user">Olá, <strong id="topbar-nome">...</strong></div>
-        <button class="topbar-logout" onclick="logout()">Sair</button>
+        <div style="display:flex;align-items:center;gap:8px">
+            <button id="tema-btn" onclick="toggleTema()" style="background:none;border:none;font-size:22px;cursor:pointer;padding:4px;line-height:1" title="Alternar tema">🌙</button>
+            <button class="topbar-logout" onclick="logout()">Sair</button>
+        </div>
     </div>
     <div class="tabs">
         <button class="tab active" onclick="goTab('painel')">Painel</button>
@@ -223,6 +295,30 @@ function mostrarLoading(msg) {
 
 function esconderLoading() {
     document.getElementById('loading-overlay').classList.remove('ativo');
+}
+
+function mostrarConfirm(msg) {
+    return new Promise(resolve => {
+        document.getElementById('confirm-msg').textContent = msg;
+        document.getElementById('confirm-overlay').classList.add('ativo');
+        const fechar = (res) => {
+            document.getElementById('confirm-overlay').classList.remove('ativo');
+            resolve(res);
+        };
+        document.getElementById('confirm-ok').onclick = () => fechar(true);
+        document.getElementById('confirm-cancel').onclick = () => fechar(false);
+    });
+}
+
+function toggleTema() {
+    const dark = document.body.classList.toggle('dark');
+    localStorage.setItem('cf_tema', dark ? 'dark' : 'light');
+    document.getElementById('tema-btn').textContent = dark ? '☀️' : '🌙';
+}
+
+// Carregar tema salvo
+if (localStorage.getItem('cf_tema') === 'dark') {
+    document.body.classList.add('dark');
 }
 
 let _toastTimer = null;
@@ -326,6 +422,7 @@ function entrarNoApp() {
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('app-screen').style.display = 'block';
     document.getElementById('topbar-nome').textContent = USUARIO_NOME;
+    document.getElementById('tema-btn').textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
     fetchData();
 }
 
@@ -401,7 +498,7 @@ async function addGasto() {
 }
 
 async function removeGasto(id) {
-    if (!confirm('Apagar este gasto?')) return;
+    if (!await mostrarConfirm('Apagar este gasto?')) return;
     mostrarLoading('Apagando gasto...');
     try {
         await fetch(`${API_URL}/gastos/${id}`, { method:'DELETE', headers: authHeaders() });
@@ -453,7 +550,7 @@ async function addBanco() {
 }
 
 async function removeBanco(id) {
-    if (!confirm('Apagar este banco?')) return;
+    if (!await mostrarConfirm('Apagar este banco? Os gastos vinculados ficarão sem banco.')) return;
     mostrarLoading('Removendo banco...');
     try {
         const res = await fetch(`${API_URL}/bancos/${id}`, { method:'DELETE', headers: authHeaders() });
@@ -477,7 +574,7 @@ async function addCategoria() {
 }
 
 async function removeCategoria(id) {
-    if (!confirm('Apagar esta categoria?')) return;
+    if (!await mostrarConfirm('Apagar esta categoria?')) return;
     mostrarLoading('Removendo categoria...');
     try {
         await fetch(`${API_URL}/categorias/${id}`, { method:'DELETE', headers: authHeaders() });
@@ -681,7 +778,7 @@ function renderMetas() {
 }
 
 async function removeMeta(id) {
-    if (!confirm('Apagar esta meta?')) return;
+    if (!await mostrarConfirm('Apagar esta meta?')) return;
     mostrarLoading('Removendo meta...');
     try {
         await fetch(`${API_URL}/metas/${id}`, { method:'DELETE', headers: authHeaders() });
