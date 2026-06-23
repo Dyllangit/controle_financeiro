@@ -783,7 +783,7 @@ function renderGastos() {
                             <td>${g.data}</td>
                             <td>${g.descricao}</td>
                             <td>${g.banco_nome || '—'}</td>
-                            <td>${g.categoria}</td>
+                            <td>${g.categoria_nome || '—'}</td>
                             <td><span class="badge ${g.tipo}">${g.tipo}</span></td>
                             <td>${fmt(g.valor)}</td>
                             <td><button class="btn danger" onclick="removeGasto(${g.id})">Apagar</button></td>
