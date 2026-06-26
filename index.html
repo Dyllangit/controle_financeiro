@@ -1023,30 +1023,49 @@ function setPeriodo(p) {
 function renderDividas() {
     const hoje = new Date(); hoje.setHours(0,0,0,0);
 
+    // Saldo atual dos bancos débito (igual ao painel)
+    const totalGastoDebito  = state.gastos.filter(g => g.tipo === 'debito').reduce((s, g) => s + g.valor, 0);
+    const totalEntrada      = state.gastos.filter(g => g.tipo === 'entrada').reduce((s, g) => s + g.valor, 0);
+    const totalSaldoBancos  = state.bancos.reduce((s, b) => s + b.saldo, 0);
+    const saldoDebito       = totalSaldoBancos - totalGastoDebito + totalEntrada;
+
     const dividas = state.dividas.map(d => {
-        const venc = new Date(d.data_vencimento + 'T00:00:00');
-        const diffMs   = venc - hoje;
-        const dias     = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-        return { ...d, dias };
+        const venc  = new Date(d.data_vencimento + 'T00:00:00');
+        const dias  = Math.ceil((venc - hoje) / (1000 * 60 * 60 * 24));
+        const saldo_apos = saldoDebito - d.valor;
+        return { ...d, dias, saldo_apos };
     });
 
-    const totalDevido  = dividas.reduce((s, d) => s + d.valor, 0);
-    const diasMinimo   = dividas.filter(d => d.dias > 0).reduce((min, d) => d.dias < min ? d.dias : min, Infinity);
-    const diasRef      = diasMinimo === Infinity ? 0 : diasMinimo;
+    const totalDevido = dividas.reduce((s, d) => s + d.valor, 0);
+    const saldoAposTotal = saldoDebito - totalDevido;
 
     const fator = { dia: 1, semana: 7, mes: 30 }[periodoDividas];
-    const necessario = diasRef > 0 ? (totalDevido / diasRef) * fator : null;
-
     const labelPeriodo = { dia: 'dia', semana: 'semana', mes: 'mês' }[periodoDividas];
+
+    // Se faltar dinheiro, calcular quanto precisar ganhar por período
+    const diasMinimo = dividas.filter(d => d.dias > 0).reduce((min, d) => d.dias < min ? d.dias : min, Infinity);
+    const diasRef    = diasMinimo === Infinity ? 1 : diasMinimo;
+    const falta      = saldoAposTotal < 0 ? Math.abs(saldoAposTotal) : 0;
+    const necessario = falta > 0 ? (falta / diasRef) * fator : 0;
+
+    const corTotal = saldoAposTotal >= 0 ? '#28a745' : '#dc3545';
+    const textoTotal = saldoAposTotal >= 0
+        ? `Sobram <strong>${fmt(saldoAposTotal)}</strong> após pagar tudo`
+        : `Faltam <strong>${fmt(Math.abs(saldoAposTotal))}</strong> — ganhe ${fmt(necessario)} por ${labelPeriodo} para quitar a tempo`;
 
     const resumoHtml = totalDevido > 0 ? `
         <div class="resumo-dividas">
-            <div class="resumo-dividas-titulo">Total em dívidas</div>
-            <div class="resumo-dividas-valor">${fmt(totalDevido)}</div>
-            ${necessario !== null
-                ? `<div class="resumo-dividas-sub">Você precisa ganhar <strong>${fmt(necessario)}</strong> por ${labelPeriodo} para quitar tudo a tempo</div>`
-                : `<div class="resumo-dividas-sub">Todas as dívidas estão vencidas</div>`
-            }
+            <div class="resumo-dividas-titulo">Saldo débito vs. dívidas</div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+                <span>Saldo atual</span><strong>${fmt(saldoDebito)}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px">
+                <span>Total em dívidas</span><strong style="color:#dc3545">${fmt(totalDevido)}</strong>
+            </div>
+            <div style="border-top:1px solid rgba(0,0,0,.1);padding-top:8px">
+                <div class="resumo-dividas-valor" style="color:${corTotal}">${fmt(saldoAposTotal)}</div>
+                <div class="resumo-dividas-sub">${textoTotal}</div>
+            </div>
         </div>
         <div class="periodo-toggle">
             <button class="periodo-btn ${periodoDividas==='dia'   ?'ativo':''}" onclick="setPeriodo('dia')">Por dia</button>
@@ -1057,10 +1076,10 @@ function renderDividas() {
     const listaHtml = dividas.length === 0
         ? `<div class="empty">Nenhuma dívida cadastrada.</div>`
         : dividas.map(d => {
-            const statusClass = d.dias < 0 ? 'vencida' : d.dias <= 7 ? 'alerta' : 'ok';
-            const statusTxt   = d.dias < 0 ? `Vencida há ${Math.abs(d.dias)} dia(s)` : d.dias === 0 ? 'Vence hoje!' : `Vence em ${d.dias} dia(s)`;
-            const diasRef2    = d.dias > 0 ? d.dias : 1;
-            const val         = (d.valor / diasRef2) * fator;
+            const statusClass  = d.dias < 0 ? 'vencida' : d.dias <= 7 ? 'alerta' : 'ok';
+            const statusTxt    = d.dias < 0 ? `Vencida há ${Math.abs(d.dias)} dia(s)` : d.dias === 0 ? 'Vence hoje!' : `Vence em ${d.dias} dia(s)`;
+            const corSaldo     = d.saldo_apos >= 0 ? '#28a745' : '#dc3545';
+            const labelSaldo   = d.saldo_apos >= 0 ? `Sobram ${fmt(d.saldo_apos)}` : `Faltam ${fmt(Math.abs(d.saldo_apos))}`;
             return `
             <div class="divida-card">
                 <div class="divida-card-top">
@@ -1073,7 +1092,7 @@ function renderDividas() {
                 </div>
                 <div style="display:flex;justify-content:space-between;align-items:center">
                     <span class="divida-valor">${fmt(d.valor)}</span>
-                    <span style="font-size:12px;color:#888">${fmt(val)} / ${labelPeriodo}</span>
+                    <span style="font-size:13px;font-weight:600;color:${corSaldo}">${labelSaldo}</span>
                 </div>
             </div>`;
         }).join('');
