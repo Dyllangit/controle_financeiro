@@ -372,6 +372,54 @@ def criar_transferencia(t: Transferencia, usuario_id: int = Depends(verificar_to
 
     return {"ok": True}
 
+# ─── Resgates ─────────────────────────────────────────────────────────────────
+
+@app.post("/resgates")
+def criar_resgate(t: Transferencia, usuario_id: int = Depends(verificar_token)):
+    if t.id_banco_origem == t.id_banco_destino:
+        raise HTTPException(status_code=400, detail="Banco de origem e destino devem ser diferentes.")
+    if t.valor <= 0:
+        raise HTTPException(status_code=400, detail="Valor deve ser maior que zero.")
+    if t.taxa < 0:
+        raise HTTPException(status_code=400, detail="Taxa não pode ser negativa.")
+
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute(
+        "SELECT bl.nome FROM bancos b JOIN bancos_lista bl ON b.banco_lista_id = bl.id WHERE b.id=%s AND b.usuario_id=%s",
+        (t.id_banco_origem, usuario_id)
+    )
+    origem = cursor.fetchone()
+    if not origem:
+        raise HTTPException(status_code=400, detail="Banco de origem inválido.")
+
+    cursor.execute(
+        "SELECT bl.nome FROM bancos b JOIN bancos_lista bl ON b.banco_lista_id = bl.id WHERE b.id=%s AND b.usuario_id=%s",
+        (t.id_banco_destino, usuario_id)
+    )
+    destino = cursor.fetchone()
+    if not destino:
+        raise HTTPException(status_code=400, detail="Banco de destino inválido.")
+
+    if t.taxa >= t.valor:
+        raise HTTPException(status_code=400, detail="A taxa não pode ser igual ou maior que o valor transferido.")
+
+    # Saída do banco origem (excluída dos gráficos como resgate_saida)
+    descricao_origem = f"Resgate para {destino['nome']}" + (f" (taxa: R$ {t.taxa:.2f})" if t.taxa > 0 else "")
+    cursor.execute(
+        "INSERT INTO gastos (descricao, valor, tipo, id_categoria, id_banco, data, usuario_id) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+        (descricao_origem, t.valor, 'resgate_saida', t.id_categoria, t.id_banco_origem, t.data, usuario_id)
+    )
+
+    # Entrada no banco destino (tipo 'entrada' para aparecer no gráfico)
+    cursor.execute(
+        "INSERT INTO gastos (descricao, valor, tipo, id_categoria, id_banco, data, usuario_id) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+        (f"Resgate de {origem['nome']}", t.valor - t.taxa, 'entrada', t.id_categoria, t.id_banco_destino, t.data, usuario_id)
+    )
+
+    return {"ok": True}
+
 # ─── Metas ────────────────────────────────────────────────────────────────────
 
 @app.get("/metas")

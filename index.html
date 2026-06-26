@@ -92,6 +92,7 @@
         .credito{background:#e3f2fd;color:#1565c0}
         .transferencia_saida{background:#fce8ff;color:#7b1fa2}
         .transferencia_entrada{background:#e8f5e9;color:#2e7d32}
+        .resgate_saida{background:#fff3e0;color:#e65100}
 
         .progress-bar{height:8px;background:#eee;border-radius:99px;overflow:hidden;margin:4px 0}
         .progress-fill{height:100%;background:#007bff;border-radius:99px;transition:width .4s}
@@ -516,9 +517,10 @@ function onTipoChange() {
     const tipo = document.getElementById('g-tipo').value;
     const transf = document.getElementById('g-transf-fields');
     const bancoLabel = document.getElementById('g-banco-label');
-    if (transf) transf.style.display = tipo === 'transferencia' ? 'grid' : 'none';
-    if (bancoLabel) bancoLabel.textContent = tipo === 'transferencia' ? 'Banco Origem' : 'Banco';
-    if (tipo === 'transferencia') atualizarBancoDestino();
+    const isBibancar = tipo === 'transferencia' || tipo === 'resgate';
+    if (transf) transf.style.display = isBibancar ? 'grid' : 'none';
+    if (bancoLabel) bancoLabel.textContent = isBibancar ? 'Banco Origem' : 'Banco';
+    if (isBibancar) atualizarBancoDestino();
 }
 
 function atualizarBancoDestino() {
@@ -537,7 +539,8 @@ async function addGasto() {
     if (!bancoId) return mostrarToast('Selecione um banco.', 'err');
     const catId = parseInt(document.getElementById('g-cat').value);
 
-    if (tipo === 'transferencia') {
+    if (tipo === 'transferencia' || tipo === 'resgate') {
+        const endpoint = tipo === 'resgate' ? 'resgates' : 'transferencias';
         const bancoDest = parseInt(document.getElementById('g-banco-destino').value);
         if (!bancoDest) return mostrarToast('Selecione o banco de destino.', 'err');
         if (bancoDest === bancoId) return mostrarToast('Banco de destino deve ser diferente do de origem.', 'err');
@@ -545,15 +548,15 @@ async function addGasto() {
         if (!valor) return mostrarToast('Informe o valor da transferência.', 'err');
         const taxa = valorNumerico(document.getElementById('g-taxa'));
         const data = document.getElementById('g-data').value;
-        mostrarLoading('Registrando transferência...');
+        mostrarLoading(tipo === 'resgate' ? 'Registrando resgate...' : 'Registrando transferência...');
         try {
-            const res = await fetch(`${API_URL}/transferencias`, {
+            const res = await fetch(`${API_URL}/${endpoint}`, {
                 method: 'POST', headers: authHeaders(),
                 body: JSON.stringify({ valor, taxa, id_banco_origem: bancoId, id_banco_destino: bancoDest, id_categoria: catId || null, data })
             });
-            if (!res.ok) { const d = await res.json(); mostrarToast(d.detail || 'Erro na transferência.', 'err'); return; }
+            if (!res.ok) { const d = await res.json(); mostrarToast(d.detail || 'Erro na operação.', 'err'); return; }
             await fetchData();
-            mostrarToast('Transferência registrada! ✓', 'ok');
+            mostrarToast(tipo === 'resgate' ? 'Resgate registrado! ✓' : 'Transferência registrada! ✓', 'ok');
         } catch(e) { mostrarToast('Erro de conexão.', 'err'); }
         finally { esconderLoading(); }
         return;
@@ -680,8 +683,8 @@ async function salvarConfig() {
 
 // ─── UI ───────────────────────────────────────────────────────────────────────
 
-const TIPO_LABEL = { debito:'Débito', credito:'Crédito', entrada:'Entrada', transferencia_saida:'Transf. Saída', transferencia_entrada:'Transf. Entrada' };
-function isDebito(g)  { return g.tipo === 'debito'  || g.tipo === 'transferencia_saida'; }
+const TIPO_LABEL = { debito:'Débito', credito:'Crédito', entrada:'Entrada', transferencia_saida:'Transf. Saída', transferencia_entrada:'Transf. Entrada', resgate_saida:'Resgate Saída' };
+function isDebito(g)  { return g.tipo === 'debito'  || g.tipo === 'transferencia_saida' || g.tipo === 'resgate_saida'; }
 function isEntrada(g) { return g.tipo === 'entrada' || g.tipo === 'transferencia_entrada'; }
 
 function fmt(v) {
@@ -805,6 +808,7 @@ function renderGastos() {
                     <option value="credito">Crédito (fatura)</option>
                     <option value="entrada">Entrada (entra no saldo)</option>
                     <option value="transferencia">Transferência entre bancos</option>
+                    <option value="resgate">Resgate de investimento</option>
                 </select></div>
                 <div><label id="g-banco-label">Banco</label><select id="g-banco" onchange="atualizarBancoDestino()">${bancoOpts}</select></div>
                 <div><label>Categoria</label><select id="g-cat">${catOpts}</select></div>
