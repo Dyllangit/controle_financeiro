@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>Meu Controle Financeiro</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         /* ── Reset ── */
         *{box-sizing:border-box;margin:0;padding:0}
@@ -293,6 +294,7 @@
     </div>
     <div class="tabs">
         <button class="tab active" onclick="goTab('painel')">Painel</button>
+        <button class="tab" onclick="goTab('dashboard')">Dashboard</button>
         <button class="tab" onclick="goTab('gastos')">Gastos</button>
         <button class="tab" onclick="goTab('metas')">Metas</button>
         <button class="tab" onclick="goTab('bancos')">Bancos</button>
@@ -301,6 +303,7 @@
     </div>
 
     <div id="painel" class="page active">Carregando...</div>
+    <div id="dashboard" class="page">Carregando...</div>
     <div id="gastos" class="page">Carregando...</div>
     <div id="metas" class="page">Carregando...</div>
     <div id="bancos" class="page">Carregando...</div>
@@ -693,10 +696,11 @@ function valorNumerico(input) {
 function pct(v, t) { return t > 0 ? Math.min(100, (v / t) * 100).toFixed(1) : 0; }
 
 function goTab(t) {
-    const names = ['painel','gastos','metas','bancos','categorias','dividas'];
+    const names = ['painel','dashboard','gastos','metas','bancos','categorias','dividas'];
     document.querySelectorAll('.tab').forEach((b, i) => b.classList.toggle('active', names[i] === t));
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(t).classList.add('active');
+    if (t === 'dashboard') renderDashboard();
 }
 
 function renderAll() {
@@ -1112,6 +1116,111 @@ function renderDividas() {
             ${resumoHtml}
             ${listaHtml}
         </div>`;
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+
+let _chartCat = null;
+let _chartDia = null;
+
+function renderDashboard() {
+    const hoje    = new Date();
+    const mes     = hoje.getMonth();
+    const ano     = hoje.getFullYear();
+    const isDark  = document.body.classList.contains('dark');
+    const corTexto = isDark ? '#9ca3af' : '#666';
+    const corGrid  = isDark ? '#374151' : '#eee';
+    const CORES = ['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#14b8a6'];
+
+    // Gastos débito de todos os tempos — por categoria
+    const porCat = {};
+    state.gastos.filter(g => g.tipo === 'debito').forEach(g => {
+        const c = g.categoria_nome || 'Sem categoria';
+        porCat[c] = (porCat[c] || 0) + g.valor;
+    });
+    const cats = Object.entries(porCat).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+    // Gastos débito do mês atual — por dia
+    const diasNoMes = new Date(ano, mes + 1, 0).getDate();
+    const porDia = Array(diasNoMes).fill(0);
+    state.gastos.filter(g => {
+        if (g.tipo !== 'debito') return false;
+        const d = new Date(g.data + 'T00:00:00');
+        return d.getMonth() === mes && d.getFullYear() === ano;
+    }).forEach(g => {
+        const dia = new Date(g.data + 'T00:00:00').getDate() - 1;
+        porDia[dia] += g.valor;
+    });
+
+    const nomeMes = hoje.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+    document.getElementById('dashboard').innerHTML = `
+        <div class="section">
+            <div class="section-title">Gastos por Categoria (total geral)</div>
+            ${cats.length === 0 ? `<div class="empty">Nenhum gasto registrado.</div>` : `<canvas id="chart-cat" style="max-height:320px"></canvas>`}
+        </div>
+        <div class="section">
+            <div class="section-title">Gastos por dia — ${nomeMes}</div>
+            <canvas id="chart-dia" style="max-height:280px"></canvas>
+        </div>`;
+
+    if (_chartCat) { _chartCat.destroy(); _chartCat = null; }
+    if (_chartDia) { _chartDia.destroy(); _chartDia = null; }
+
+    if (cats.length > 0) {
+        _chartCat = new Chart(document.getElementById('chart-cat'), {
+            type: 'bar',
+            data: {
+                labels: cats.map(c => c[0]),
+                datasets: [{
+                    data: cats.map(c => c[1]),
+                    backgroundColor: CORES.slice(0, cats.length),
+                    borderRadius: 6,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: ctx => ' R$ ' + ctx.raw.toFixed(2).replace('.', ',') } }
+                },
+                scales: {
+                    x: { ticks: { color: corTexto }, grid: { color: corGrid } },
+                    y: { ticks: { color: corTexto, callback: v => 'R$ ' + v.toFixed(0) }, grid: { color: corGrid }, beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    _chartDia = new Chart(document.getElementById('chart-dia'), {
+        type: 'line',
+        data: {
+            labels: Array.from({ length: diasNoMes }, (_, i) => i + 1),
+            datasets: [{
+                label: 'Gasto (R$)',
+                data: porDia,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59,130,246,.12)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: '#3b82f6'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ' R$ ' + ctx.raw.toFixed(2).replace('.', ',') } }
+            },
+            scales: {
+                x: { ticks: { color: corTexto }, grid: { color: corGrid } },
+                y: { ticks: { color: corTexto, callback: v => 'R$ ' + v.toFixed(0) }, grid: { color: corGrid }, beginAtZero: true }
+            }
+        }
+    });
 }
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
