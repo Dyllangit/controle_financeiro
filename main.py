@@ -357,17 +357,17 @@ def criar_transferencia(t: Transferencia, usuario_id: int = Depends(verificar_to
     if t.taxa >= t.valor:
         raise HTTPException(status_code=400, detail="A taxa não pode ser igual ou maior que o valor transferido.")
 
-    # Débito no banco origem (perde o valor cheio)
+    # Saída do banco origem
     descricao_origem = f"Transferência para {destino['nome']}" + (f" (taxa: R$ {t.taxa:.2f})" if t.taxa > 0 else "")
     cursor.execute(
         "INSERT INTO gastos (descricao, valor, tipo, id_categoria, id_banco, data, usuario_id) VALUES (%s,%s,%s,%s,%s,%s,%s)",
-        (descricao_origem, t.valor, 'debito', t.id_categoria, t.id_banco_origem, t.data, usuario_id)
+        (descricao_origem, t.valor, 'transferencia_saida', t.id_categoria, t.id_banco_origem, t.data, usuario_id)
     )
 
-    # Entrada no banco destino (recebe valor menos a taxa)
+    # Entrada no banco destino (valor menos a taxa)
     cursor.execute(
         "INSERT INTO gastos (descricao, valor, tipo, id_categoria, id_banco, data, usuario_id) VALUES (%s,%s,%s,%s,%s,%s,%s)",
-        (f"Transferência de {origem['nome']}", t.valor - t.taxa, 'entrada', t.id_categoria, t.id_banco_destino, t.data, usuario_id)
+        (f"Transferência de {origem['nome']}", t.valor - t.taxa, 'transferencia_entrada', t.id_categoria, t.id_banco_destino, t.data, usuario_id)
     )
 
     return {"ok": True}

@@ -90,6 +90,8 @@
         .badge{padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600}
         .debito{background:#ffebee;color:#c62828}
         .credito{background:#e3f2fd;color:#1565c0}
+        .transferencia_saida{background:#fce8ff;color:#7b1fa2}
+        .transferencia_entrada{background:#e8f5e9;color:#2e7d32}
 
         .progress-bar{height:8px;background:#eee;border-radius:99px;overflow:hidden;margin:4px 0}
         .progress-fill{height:100%;background:#007bff;border-radius:99px;transition:width .4s}
@@ -678,6 +680,10 @@ async function salvarConfig() {
 
 // ─── UI ───────────────────────────────────────────────────────────────────────
 
+const TIPO_LABEL = { debito:'Débito', credito:'Crédito', entrada:'Entrada', transferencia_saida:'Transf. Saída', transferencia_entrada:'Transf. Entrada' };
+function isDebito(g)  { return g.tipo === 'debito'  || g.tipo === 'transferencia_saida'; }
+function isEntrada(g) { return g.tipo === 'entrada' || g.tipo === 'transferencia_entrada'; }
+
 function fmt(v) {
     const sinal = v < 0 ? '-' : '';
     return `${sinal}R$ ${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
@@ -715,8 +721,8 @@ function renderAll() {
 
 // ─── PAINEL ───────────────────────────────────────────────────────────────────
 function renderPainel() {
-    const totalDebito  = state.gastos.filter(g => g.tipo === 'debito').reduce((a, b) => a + b.valor, 0);
-    const totalEntrada = state.gastos.filter(g => g.tipo === 'entrada').reduce((a, b) => a + b.valor, 0);
+    const totalDebito  = state.gastos.filter(isDebito).reduce((a, b) => a + b.valor, 0);
+    const totalEntrada = state.gastos.filter(isEntrada).reduce((a, b) => a + b.valor, 0);
     const totalCredito = state.gastos.filter(g => g.tipo === 'credito').reduce((a, b) => a + b.valor, 0);
     const totalSaldoCadastrado = state.bancos.reduce((a, b) => a + b.saldo, 0);
     const totalLimite  = state.bancos.reduce((a, b) => a + b.limite_credito, 0);
@@ -724,8 +730,8 @@ function renderPainel() {
 
     const porBanco = state.bancos.map(banco => {
         const gastosB  = state.gastos.filter(g => g.id_banco === banco.id);
-        const debitoB  = gastosB.filter(g => g.tipo === 'debito').reduce((a, b) => a + b.valor, 0);
-        const entradaB = gastosB.filter(g => g.tipo === 'entrada').reduce((a, b) => a + b.valor, 0);
+        const debitoB  = gastosB.filter(isDebito).reduce((a, b) => a + b.valor, 0);
+        const entradaB = gastosB.filter(isEntrada).reduce((a, b) => a + b.valor, 0);
         const creditoB = gastosB.filter(g => g.tipo === 'credito').reduce((a, b) => a + b.valor, 0);
         return { ...banco, debitoB, creditoB, saldoAtualB: banco.saldo - debitoB + entradaB, limiteDispB: banco.limite_credito - creditoB };
     });
@@ -760,8 +766,8 @@ function renderPainel() {
                 <thead><tr><th>Data</th><th>Descrição</th><th>Banco</th><th>Tipo</th><th>Valor</th></tr></thead>
                 <tbody>
                     ${state.gastos.slice(0, 5).map(g => {
-                        const tipoLabel = { debito: 'Débito', credito: 'Crédito', entrada: 'Entrada' }[g.tipo] || g.tipo;
-                        const valorFmt = g.tipo === 'entrada' ? `<span class="green">+${fmt(g.valor)}</span>` : fmt(g.valor);
+                        const tipoLabel = TIPO_LABEL[g.tipo] || g.tipo;
+                        const valorFmt = isEntrada(g) ? `<span class="green">+${fmt(g.valor)}</span>` : fmt(g.valor);
                         return `
                         <tr>
                             <td>${g.data}</td>
@@ -1028,8 +1034,8 @@ function renderDividas() {
     const hoje = new Date(); hoje.setHours(0,0,0,0);
 
     // Saldo atual dos bancos débito (igual ao painel)
-    const totalGastoDebito  = state.gastos.filter(g => g.tipo === 'debito').reduce((s, g) => s + g.valor, 0);
-    const totalEntrada      = state.gastos.filter(g => g.tipo === 'entrada').reduce((s, g) => s + g.valor, 0);
+    const totalGastoDebito  = state.gastos.filter(isDebito).reduce((s, g) => s + g.valor, 0);
+    const totalEntrada      = state.gastos.filter(isEntrada).reduce((s, g) => s + g.valor, 0);
     const totalSaldoBancos  = state.bancos.reduce((s, b) => s + b.saldo, 0);
     const saldoDebito       = totalSaldoBancos - totalGastoDebito + totalEntrada;
 
@@ -1132,7 +1138,7 @@ function renderDashboard() {
     const corGrid  = isDark ? '#374151' : '#eee';
     const CORES = ['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#14b8a6'];
 
-    // Gastos débito de todos os tempos — por categoria
+    // Gastos débito reais (sem transferências) — por categoria
     const porCat = {};
     state.gastos.filter(g => g.tipo === 'debito').forEach(g => {
         const c = g.categoria_nome || 'Sem categoria';
@@ -1140,16 +1146,16 @@ function renderDashboard() {
     });
     const cats = Object.entries(porCat).sort((a, b) => b[1] - a[1]).slice(0, 10);
 
-    // Gastos débito do mês atual — por dia
+    // Gastos e entradas do mês atual — por dia (sem transferências)
     const diasNoMes = new Date(ano, mes + 1, 0).getDate();
-    const porDia = Array(diasNoMes).fill(0);
-    state.gastos.filter(g => {
-        if (g.tipo !== 'debito') return false;
+    const porDiaDebito  = Array(diasNoMes).fill(0);
+    const porDiaEntrada = Array(diasNoMes).fill(0);
+    state.gastos.forEach(g => {
         const d = new Date(g.data + 'T00:00:00');
-        return d.getMonth() === mes && d.getFullYear() === ano;
-    }).forEach(g => {
-        const dia = new Date(g.data + 'T00:00:00').getDate() - 1;
-        porDia[dia] += g.valor;
+        if (d.getMonth() !== mes || d.getFullYear() !== ano) return;
+        const idx = d.getDate() - 1;
+        if (g.tipo === 'debito')  porDiaDebito[idx]  += g.valor;
+        if (g.tipo === 'entrada') porDiaEntrada[idx] += g.valor;
     });
 
     const nomeMes = hoje.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
@@ -1197,23 +1203,36 @@ function renderDashboard() {
         type: 'line',
         data: {
             labels: Array.from({ length: diasNoMes }, (_, i) => i + 1),
-            datasets: [{
-                label: 'Gasto (R$)',
-                data: porDia,
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59,130,246,.12)',
-                fill: true,
-                tension: 0.4,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                pointBackgroundColor: '#3b82f6'
-            }]
+            datasets: [
+                {
+                    label: 'Gastos',
+                    data: porDiaDebito,
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239,68,68,.08)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#ef4444'
+                },
+                {
+                    label: 'Entradas',
+                    data: porDiaEntrada,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16,185,129,.08)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#10b981'
+                }
+            ]
         },
         options: {
             responsive: true,
             plugins: {
-                legend: { display: false },
-                tooltip: { callbacks: { label: ctx => ' R$ ' + ctx.raw.toFixed(2).replace('.', ',') } }
+                legend: { display: true, labels: { color: corTexto, boxWidth: 12, padding: 16 } },
+                tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: R$ ${ctx.raw.toFixed(2).replace('.', ',')}` } }
             },
             scales: {
                 x: { ticks: { color: corTexto }, grid: { color: corGrid } },
