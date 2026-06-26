@@ -97,6 +97,11 @@ class Banco(BaseModel):
 class Categoria(BaseModel):
     nome: str
 
+class Divida(BaseModel):
+    nome: str
+    valor: float
+    data_vencimento: date
+
 class Transferencia(BaseModel):
     valor: float
     taxa: float = 0
@@ -291,6 +296,32 @@ def deletar_gasto(id: int, usuario_id: int = Depends(verificar_token)):
     db = get_db()
     cursor = db.cursor()
     cursor.execute("DELETE FROM gastos WHERE id=%s AND usuario_id=%s", (id, usuario_id))
+    return {"ok": True}
+
+# ─── Dívidas ─────────────────────────────────────────────────────────────────
+
+@app.get("/dividas")
+def listar_dividas(usuario_id: int = Depends(verificar_token)):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM dividas WHERE usuario_id=%s ORDER BY data_vencimento ASC", (usuario_id,))
+    return cursor.fetchall()
+
+@app.post("/dividas")
+def criar_divida(d: Divida, usuario_id: int = Depends(verificar_token)):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute(
+        "INSERT INTO dividas (nome, valor, data_vencimento, usuario_id) VALUES (%s,%s,%s,%s)",
+        (d.nome, d.valor, d.data_vencimento, usuario_id)
+    )
+    return {"id": cursor.lastrowid}
+
+@app.delete("/dividas/{id}")
+def deletar_divida(id: int, usuario_id: int = Depends(verificar_token)):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("DELETE FROM dividas WHERE id=%s AND usuario_id=%s", (id, usuario_id))
     return {"ok": True}
 
 # ─── Transferências ───────────────────────────────────────────────────────────

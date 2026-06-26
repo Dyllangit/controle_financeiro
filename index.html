@@ -182,6 +182,31 @@
         body.dark .confirm-card{background:#1f2937}
         body.dark .confirm-msg{color:#e5e7eb}
         body.dark #tema-btn{color:#fbbf24}
+
+        /* ── Dívidas ── */
+        .divida-card{border:1px solid #eee;border-radius:10px;padding:1rem;margin-bottom:.75rem;background:#fafafa}
+        .divida-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem}
+        .divida-nome{font-weight:600;font-size:14px}
+        .divida-valor{font-weight:700;font-size:16px;color:#dc3545}
+        .divida-info{display:flex;gap:16px;font-size:12px;color:#888;margin-bottom:.5rem;flex-wrap:wrap}
+        .divida-vence{font-size:12px}
+        .divida-vence.ok{color:#28a745}
+        .divida-vence.alerta{color:#e65100}
+        .divida-vence.vencida{color:#dc3545;font-weight:600}
+        .periodo-toggle{display:flex;gap:6px;margin-bottom:1rem}
+        .periodo-btn{padding:6px 14px;border:1px solid #ddd;border-radius:99px;font-size:13px;cursor:pointer;background:#fff;transition:.15s}
+        .periodo-btn.ativo{background:#333;color:#fff;border-color:transparent}
+        .resumo-dividas{background:#fff3cd;border:1px solid #ffc107;border-radius:10px;padding:1rem;margin-bottom:1rem}
+        .resumo-dividas-titulo{font-size:13px;color:#856404;font-weight:600;margin-bottom:.5rem}
+        .resumo-dividas-valor{font-size:24px;font-weight:700;color:#856404}
+        .resumo-dividas-sub{font-size:12px;color:#856404;margin-top:2px}
+        body.dark .divida-card{background:#111827;border-color:#374151}
+        body.dark .divida-nome{color:#e5e7eb}
+        body.dark .divida-info{color:#9ca3af}
+        body.dark .periodo-btn{background:#374151;border-color:#4b5563;color:#e5e7eb}
+        body.dark .periodo-btn.ativo{background:#e5e7eb;color:#111827}
+        body.dark .resumo-dividas{background:#1f1a00;border-color:#854d0e}
+        body.dark .resumo-dividas-titulo,.dark .resumo-dividas-valor,.dark .resumo-dividas-sub{color:#fbbf24}
     </style>
 </head>
 <body>
@@ -272,6 +297,7 @@
         <button class="tab" onclick="goTab('metas')">Metas</button>
         <button class="tab" onclick="goTab('bancos')">Bancos</button>
         <button class="tab" onclick="goTab('categorias')">Categorias</button>
+        <button class="tab" onclick="goTab('dividas')">Dívidas</button>
     </div>
 
     <div id="painel" class="page active">Carregando...</div>
@@ -279,6 +305,7 @@
     <div id="metas" class="page">Carregando...</div>
     <div id="bancos" class="page">Carregando...</div>
     <div id="categorias" class="page">Carregando...</div>
+    <div id="dividas" class="page">Carregando...</div>
     <div id="config" class="page" style="display:none"></div>
 </div>
 </div>
@@ -351,8 +378,11 @@ let state = {
     metas: [],
     bancos: [],
     categorias: [],
+    dividas: [],
     config: { saldo: 0, limite_credito: 0 }
 };
+
+let periodoDividas = 'mes';
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 
@@ -447,13 +477,14 @@ if (TOKEN) {
 async function fetchData() {
     mostrarLoading('Carregando dados...');
     try {
-        const [resGastos, resMetas, resBancos, resCats, resConfig, resBancosLista] = await Promise.all([
+        const [resGastos, resMetas, resBancos, resCats, resConfig, resBancosLista, resDividas] = await Promise.all([
             fetch(`${API_URL}/gastos`,       { headers: authHeaders() }),
             fetch(`${API_URL}/metas`,        { headers: authHeaders() }),
             fetch(`${API_URL}/bancos`,       { headers: authHeaders() }),
             fetch(`${API_URL}/categorias`,   { headers: authHeaders() }),
             fetch(`${API_URL}/config`,       { headers: authHeaders() }),
-            fetch(`${API_URL}/bancos-lista`, { headers: authHeaders() })
+            fetch(`${API_URL}/bancos-lista`, { headers: authHeaders() }),
+            fetch(`${API_URL}/dividas`,      { headers: authHeaders() })
         ]);
 
         if (resGastos.status === 401) { esconderLoading(); logout(); return; }
@@ -462,6 +493,7 @@ async function fetchData() {
         state.metas         = await resMetas.json();
         state.bancos        = await resBancos.json();
         state.categorias    = await resCats.json();
+        state.dividas       = await resDividas.json();
         listaBancosOficiais = await resBancosLista.json();
         const config        = await resConfig.json();
         if (config) state.config = config;
@@ -661,7 +693,7 @@ function valorNumerico(input) {
 function pct(v, t) { return t > 0 ? Math.min(100, (v / t) * 100).toFixed(1) : 0; }
 
 function goTab(t) {
-    const names = ['painel','gastos','metas','bancos','categorias'];
+    const names = ['painel','gastos','metas','bancos','categorias','dividas'];
     document.querySelectorAll('.tab').forEach((b, i) => b.classList.toggle('active', names[i] === t));
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(t).classList.add('active');
@@ -673,6 +705,7 @@ function renderAll() {
     renderMetas();
     renderBancos();
     renderCategorias();
+    renderDividas();
     renderConfig();
 }
 
@@ -949,6 +982,116 @@ function renderCategorias() {
                     <div class="chip">${c.nome}<button onclick="removeCategoria(${c.id})" title="Remover">×</button></div>
                 `).join('')}
             </div>`}
+        </div>`;
+}
+
+// ─── DÍVIDAS ──────────────────────────────────────────────────────────────────
+
+async function addDivida() {
+    const nome  = document.getElementById('div-nome').value.trim();
+    const valor = valorNumerico(document.getElementById('div-valor'));
+    const data  = document.getElementById('div-data').value;
+    if (!nome)  return mostrarToast('Informe o nome da dívida.', 'err');
+    if (!valor) return mostrarToast('Informe o valor da dívida.', 'err');
+    if (!data)  return mostrarToast('Informe a data de vencimento.', 'err');
+    mostrarLoading('Cadastrando dívida...');
+    try {
+        const res = await fetch(`${API_URL}/dividas`, { method:'POST', headers: authHeaders(), body: JSON.stringify({ nome, valor, data_vencimento: data }) });
+        if (!res.ok) { const d = await res.json(); mostrarToast(d.detail || 'Erro ao cadastrar.', 'err'); return; }
+        await fetchData();
+        mostrarToast('Dívida cadastrada! ✓', 'ok');
+    } catch(e) { mostrarToast('Erro de conexão.', 'err'); }
+    finally { esconderLoading(); }
+}
+
+async function removeDivida(id) {
+    if (!await mostrarConfirm('Apagar esta dívida?')) return;
+    mostrarLoading('Removendo dívida...');
+    try {
+        await fetch(`${API_URL}/dividas/${id}`, { method:'DELETE', headers: authHeaders() });
+        await fetchData();
+        mostrarToast('Dívida removida. ✓', 'ok');
+    } catch(e) { mostrarToast('Erro ao remover.', 'err'); }
+    finally { esconderLoading(); }
+}
+
+function setPeriodo(p) {
+    periodoDividas = p;
+    renderDividas();
+}
+
+function renderDividas() {
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+
+    const dividas = state.dividas.map(d => {
+        const venc = new Date(d.data_vencimento + 'T00:00:00');
+        const diffMs   = venc - hoje;
+        const dias     = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        return { ...d, dias };
+    });
+
+    const totalDevido  = dividas.reduce((s, d) => s + d.valor, 0);
+    const diasMinimo   = dividas.filter(d => d.dias > 0).reduce((min, d) => d.dias < min ? d.dias : min, Infinity);
+    const diasRef      = diasMinimo === Infinity ? 0 : diasMinimo;
+
+    const fator = { dia: 1, semana: 7, mes: 30 }[periodoDividas];
+    const necessario = diasRef > 0 ? (totalDevido / diasRef) * fator : null;
+
+    const labelPeriodo = { dia: 'dia', semana: 'semana', mes: 'mês' }[periodoDividas];
+
+    const resumoHtml = totalDevido > 0 ? `
+        <div class="resumo-dividas">
+            <div class="resumo-dividas-titulo">Total em dívidas</div>
+            <div class="resumo-dividas-valor">${fmt(totalDevido)}</div>
+            ${necessario !== null
+                ? `<div class="resumo-dividas-sub">Você precisa ganhar <strong>${fmt(necessario)}</strong> por ${labelPeriodo} para quitar tudo a tempo</div>`
+                : `<div class="resumo-dividas-sub">Todas as dívidas estão vencidas</div>`
+            }
+        </div>
+        <div class="periodo-toggle">
+            <button class="periodo-btn ${periodoDividas==='dia'   ?'ativo':''}" onclick="setPeriodo('dia')">Por dia</button>
+            <button class="periodo-btn ${periodoDividas==='semana'?'ativo':''}" onclick="setPeriodo('semana')">Por semana</button>
+            <button class="periodo-btn ${periodoDividas==='mes'   ?'ativo':''}" onclick="setPeriodo('mes')">Por mês</button>
+        </div>` : '';
+
+    const listaHtml = dividas.length === 0
+        ? `<div class="empty">Nenhuma dívida cadastrada.</div>`
+        : dividas.map(d => {
+            const statusClass = d.dias < 0 ? 'vencida' : d.dias <= 7 ? 'alerta' : 'ok';
+            const statusTxt   = d.dias < 0 ? `Vencida há ${Math.abs(d.dias)} dia(s)` : d.dias === 0 ? 'Vence hoje!' : `Vence em ${d.dias} dia(s)`;
+            const diasRef2    = d.dias > 0 ? d.dias : 1;
+            const val         = (d.valor / diasRef2) * fator;
+            return `
+            <div class="divida-card">
+                <div class="divida-card-top">
+                    <span class="divida-nome">${d.nome}</span>
+                    <button class="btn danger" onclick="removeDivida(${d.id})">Apagar</button>
+                </div>
+                <div class="divida-info">
+                    <span class="divida-vence ${statusClass}">${statusTxt}</span>
+                    <span>Vencimento: ${d.data_vencimento}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <span class="divida-valor">${fmt(d.valor)}</span>
+                    <span style="font-size:12px;color:#888">${fmt(val)} / ${labelPeriodo}</span>
+                </div>
+            </div>`;
+        }).join('');
+
+    document.getElementById('dividas').innerHTML = `
+        <div class="section">
+            <div class="section-title">Nova Dívida</div>
+            <div class="form-row three">
+                <div><label>Nome</label><input id="div-nome" placeholder="Ex: Cartão, Aluguel..."></div>
+                <div><label>Valor (R$)</label><input id="div-valor" type="text" placeholder="0,00" oninput="mascaraMoeda(this)" inputmode="numeric"></div>
+                <div><label>Data de Vencimento</label><input id="div-data" type="date"></div>
+            </div>
+            <button class="btn primary btn-full" onclick="addDivida()">Cadastrar Dívida</button>
+        </div>
+        <div class="section">
+            <div class="section-title">Minhas Dívidas</div>
+            ${resumoHtml}
+            ${listaHtml}
         </div>`;
 }
 
